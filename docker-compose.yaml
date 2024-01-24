@@ -1,0 +1,168 @@
+version: "3.7"
+services:
+  db:
+    hostname: ${POSTGRES_HOST}
+    image: ankane/pgvector
+    restart: always
+    ports:
+     - ${POSTGRES_PORT}:5432
+    environment:      
+      - TZ=Europe/Paris
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./storage/db/data:/var/lib/postgresql/data
+      - ./storage/db/init.sql:/docker-entrypoint-initdb.d/init.sql      
+    networks:
+      - backend-network
+
+  dbadmin:
+    hostname: dbadmin
+    image: adminer
+    restart: unless-stopped    
+    ports:
+      - 8080:8080
+    networks:
+      - backend-network
+      - frontend-network
+    depends_on: 
+      - db
+
+  # app:
+  #   hostname: app
+  #   build: app
+  #   image: local_image/rag-app
+  #   restart: unless-stopped
+  #   ports:
+  #     #- 5678:5678
+  #     - 5000:5000
+  #   volumes:
+  #     - ./app/src:/code
+  #     - ./documents:/documents
+  #     - ./app/huggingface:${HUGGINGFACE_CACHE}
+  #   networks:
+  #     - backend-network
+  #     - frontend-network
+  #   environment:      
+  #     - TZ=Europe/Paris
+  #     - ENV
+  #     - DEBUG
+  #     - POSTGRES_HOST
+  #     - POSTGRES_PORT
+  #     - POSTGRES_USER
+  #     - POSTGRES_PASSWORD
+  #     - REDIS_URL
+  #     - REDIS_QUEUE
+  #     - REDIS_CHANNEL
+  #     - HUGGINGFACE_CACHE
+  #     - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
+  #   command: python3 server.py
+  #   depends_on:
+  #     - db
+  #     - redis
+
+  # worker:
+  #   hostname: worker
+  #   image: local_image/rag-app
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./app/src:/code
+  #     - ./documents:/documents
+  #     - ./app/huggingface:${HUGGINGFACE_CACHE}
+  #   networks:
+  #     - backend-network
+  #   environment:      
+  #     - TZ=Europe/Paris
+  #     - ENV
+  #     - DEBUG
+  #     - POSTGRES_HOST
+  #     - POSTGRES_PORT
+  #     - POSTGRES_USER
+  #     - POSTGRES_PASSWORD
+  #     - REDIS_URL
+  #     - REDIS_QUEUE
+  #     - REDIS_CHANNEL
+  #     - HUGGINGFACE_CACHE
+  #     - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
+  #   command: python3 worker.py
+  #   depends_on:
+  #     - db
+  #     - redis
+
+  # rq-dashboard:
+  #   hostname: worker
+  #   image: local_image/rag-app
+  #   restart: unless-stopped
+  #   ports:      
+  #     - 9181:9181
+  #   networks:
+  #     - backend-network
+  #     - frontend-network      
+  #   command: rq-dashboard -u redis://redis:${REDIS_PORT}
+  #   depends_on:
+  #     - redis
+
+  # web:
+  #   hostname: web
+  #   build: web
+  #   image: local_image/rag-web
+  #   restart: unless-stopped
+  #   ports:
+  #     - 3000:3000
+  #   volumes:
+  #     - ./web:/app
+  #   networks:
+  #     - frontend-network
+  #   environment:
+  #     - TZ=Europe/Paris
+  #     - ENV
+  #     - DEBUG
+  #     - API_URL
+  #     - DANGEROUSLY_DISABLE_HOST_CHECK=true
+  #     - FAST_REFRESH=false
+  #     - CHOKIDAR_USEPOLLING=true
+  #     - WATCHPACK_POLLING=true
+  #   depends_on:
+  #     - app
+
+  # proxy:
+  #   hostname: proxy
+  #   build: proxy
+  #   image: local_image/rag-proxy
+  #   restart: always
+  #   ports:
+  #     - 80:80
+  #   networks:
+  #     - frontend-network
+  #   depends_on:
+  #     - web
+
+  # redis: 
+  #   hostname: redis
+  #   image: redis/redis-stack-server:latest
+  #   restart: always
+  #   ports:
+  #     - ${REDIS_PORT}:6379
+  #   volumes:
+  #     - ./db/redis-data:/data
+  #   networks:
+  #     - backend-network
+  #   environment:
+  #     - TZ=Europe/Paris
+
+  # redisinsight:
+  #   image: redislabs/redisinsight:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - 8001:8001
+  #   networks:
+  #     - backend-network
+  #     - frontend-network
+  #   depends_on: 
+  #     - redis
+
+networks:
+  backend-network:
+  frontend-network:
