@@ -24,8 +24,14 @@ class ServiceModel():
             from llm.model_local import ModelLocal
             model = ModelLocal()
             
-        model.init_model()        
-        model.agent, model.topics = self.db.select_knowledge_agent_topics()
+        model.init_model()
+        try:
+            self.db.open_session()
+            knowledge = self.db.select_knowledge()
+            model.agent = knowledge.agent
+            model.topics = knowledge.topics
+        finally:
+            self.db.close_session()
         self.model = model
 
     # ---------------------------------------------------------------------------

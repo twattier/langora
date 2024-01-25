@@ -19,28 +19,17 @@ transformers
 sentence-transformers
 bitsandbytes
 accelerate
-
-# Flask
-# flask_restx
-
-# numpy==1.22.0
-# spacy
-# sentence-transformers
-# pypdf
-# alive_progress
-# beautifulsoup4
-# sqlalchemy
-# flask-marshmallow
-# flask_sqlalchemy
-# marshmallow-sqlalchemy
-# redis
-# rq
-# rq_dashboard
-# tiktoken
+#API
+Flask
+flask_restx
+#JSON Mapping
+flask-marshmallow
+flask_sqlalchemy
+marshmallow-sqlalchemy
+#Redis 
+redis
+rq
+rq_dashboard
 
 # debugging only
 #ptvsd==4.3.2
-
-
-#dockerfile :
-#playwright install

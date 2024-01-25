@@ -1,6 +1,11 @@
-GenAI Rag implementation
+# Langora
 
-Deploy :
+**Web scraping to knowledge base system**
 
+
+
+### Build and deploy containers :
+```
 docker-compose build
 docker-compose up -d
+```

@@ -3,7 +3,6 @@ from langora import Langora
 from db.dbvector import STORE
 
 app = Langora()
-app.db.open_session()
 try:
     app.init_services()
 

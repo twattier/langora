@@ -1,0 +1,22 @@
+FROM nvidia/cuda:11.8.0-base-ubuntu20.04
+
+# update and python
+RUN apt-get update && \
+    apt-get install -y \
+        python3-pip \
+        python3-dev
+
+RUN pip3 install --upgrade pip setuptools
+
+#pytorch
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+#Application Install
+WORKDIR /app
+ADD requirements.txt .
+RUN pip3 install -r requirements.txt
+
+#playwright (chromium install)
+RUN playwright install
+
+ENV IN_DOCKER Yes

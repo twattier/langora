@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, select, text, func
 from sqlalchemy.orm import Session
 
 from config.env import Config
-from .datamodel import Base, Knowledge, Search, Source, SearchSource
+from .datamodel import Base, Knowledge, Search, Source
 
 CONNECTION_STRING = PGVector.connection_string_from_db_params(
     driver="psycopg2",
@@ -29,6 +29,10 @@ class DbVector():
         self.session = None
         self.embeddings = None
         self.stores = None
+
+    def init_db(self):
+        self.init_embeddings()
+        self.init_stores()
 
     def init_embeddings(self):
         if self.embeddings:
@@ -103,10 +107,9 @@ class DbVector():
     # ---------------------------------------------------------------------------
     # Knowledge
     
-    def select_knowledge_agent_topics(self)->(str, list[str]):
+    def select_knowledge(self)->Knowledge:
         stmt = select(Knowledge)
-        knowledge = self.select_one(stmt)
-        return knowledge.agent, knowledge.topics
+        return self.select_one(stmt)
 
     # ---------------------------------------------------------------------------
     # Utils SqlAlchemy

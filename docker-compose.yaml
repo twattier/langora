@@ -1,5 +1,70 @@
 version: "3.7"
 services:
+
+  api:
+    hostname: api
+    build: 
+      context: langora
+      dockerfile: Dockerfile
+    image: local_image/langora-app
+    restart: unless-stopped
+    ports:
+      #- 5678:5678
+      - 5000:5000
+    volumes:
+      - ./langora/app:/app
+      - ./storage:/storage
+    networks:
+      - langora-backend
+      - langora-frontend
+    environment:      
+      - TZ=${TZ}
+      - ENV
+      - DEBUG
+      - OPENAI_API_KEY
+      - GOOGLE_API_KEY
+      - GOOGLE_CSE_ID
+      - APIFY_API_TOKEN
+      - HUGGINGFACE_CACHE
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      # - REDIS_URL
+      # - REDIS_QUEUE
+      # - REDIS_CHANNEL
+    command: python3 api.py
+    depends_on:
+      - db
+      # - redis
+
+  worker:
+    hostname: worker
+    image: local_image/langora-app
+    restart: unless-stopped
+    volumes:
+      - ./langora/app:/app
+      - ./storage:/storage
+    networks:
+      - langora-backend
+    environment:      
+      - TZ=${TZ}
+      - ENV
+      - DEBUG
+      - OPENAI_API_KEY
+      - GOOGLE_API_KEY
+      - GOOGLE_CSE_ID
+      - APIFY_API_TOKEN
+      - HUGGINGFACE_CACHE
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+    command: python3 worker.py
+    depends_on:
+      - db
+      # - redis
+
   db:
     hostname: ${POSTGRES_HOST}
     image: ankane/pgvector
@@ -7,7 +72,7 @@ services:
     ports:
      - ${POSTGRES_PORT}:5432
     environment:      
-      - TZ=Europe/Paris
+      - TZ=${TZ}
       - POSTGRES_DB
       - POSTGRES_USER
       - POSTGRES_PASSWORD
@@ -16,7 +81,7 @@ services:
       - ./storage/db/data:/var/lib/postgresql/data
       - ./storage/db/init.sql:/docker-entrypoint-initdb.d/init.sql      
     networks:
-      - backend-network
+      - langora-backend
 
   dbadmin:
     hostname: dbadmin
@@ -25,119 +90,47 @@ services:
     ports:
       - 8080:8080
     networks:
-      - backend-network
-      - frontend-network
+      - langora-backend
+      - langora-frontend
     depends_on: 
-      - db
+      - db  
 
-  # app:
-  #   hostname: app
-  #   build: app
-  #   image: local_image/rag-app
-  #   restart: unless-stopped
-  #   ports:
-  #     #- 5678:5678
-  #     - 5000:5000
-  #   volumes:
-  #     - ./app/src:/code
-  #     - ./documents:/documents
-  #     - ./app/huggingface:${HUGGINGFACE_CACHE}
-  #   networks:
-  #     - backend-network
-  #     - frontend-network
-  #   environment:      
-  #     - TZ=Europe/Paris
-  #     - ENV
-  #     - DEBUG
-  #     - POSTGRES_HOST
-  #     - POSTGRES_PORT
-  #     - POSTGRES_USER
-  #     - POSTGRES_PASSWORD
-  #     - REDIS_URL
-  #     - REDIS_QUEUE
-  #     - REDIS_CHANNEL
-  #     - HUGGINGFACE_CACHE
-  #     - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
-  #   command: python3 server.py
-  #   depends_on:
-  #     - db
-  #     - redis
+  web:
+    hostname: web
+    build: web
+    image: local_image/langora-web
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    volumes:
+      - ./web:/web
+    networks:
+      - langora-frontend
+    environment:
+      - TZ=${TZ}
+      - ENV
+      - DEBUG
+      - API_URL
+      # - DANGEROUSLY_DISABLE_HOST_CHECK=true
+      # - FAST_REFRESH=false
+      # - CHOKIDAR_USEPOLLING=true
+      # - WATCHPACK_POLLING=true
+    depends_on:
+      - api
 
-  # worker:
-  #   hostname: worker
-  #   image: local_image/rag-app
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ./app/src:/code
-  #     - ./documents:/documents
-  #     - ./app/huggingface:${HUGGINGFACE_CACHE}
-  #   networks:
-  #     - backend-network
-  #   environment:      
-  #     - TZ=Europe/Paris
-  #     - ENV
-  #     - DEBUG
-  #     - POSTGRES_HOST
-  #     - POSTGRES_PORT
-  #     - POSTGRES_USER
-  #     - POSTGRES_PASSWORD
-  #     - REDIS_URL
-  #     - REDIS_QUEUE
-  #     - REDIS_CHANNEL
-  #     - HUGGINGFACE_CACHE
-  #     - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
-  #   command: python3 worker.py
-  #   depends_on:
-  #     - db
-  #     - redis
-
-  # rq-dashboard:
-  #   hostname: worker
-  #   image: local_image/rag-app
-  #   restart: unless-stopped
-  #   ports:      
-  #     - 9181:9181
-  #   networks:
-  #     - backend-network
-  #     - frontend-network      
-  #   command: rq-dashboard -u redis://redis:${REDIS_PORT}
-  #   depends_on:
-  #     - redis
-
-  # web:
-  #   hostname: web
-  #   build: web
-  #   image: local_image/rag-web
-  #   restart: unless-stopped
-  #   ports:
-  #     - 3000:3000
-  #   volumes:
-  #     - ./web:/app
-  #   networks:
-  #     - frontend-network
-  #   environment:
-  #     - TZ=Europe/Paris
-  #     - ENV
-  #     - DEBUG
-  #     - API_URL
-  #     - DANGEROUSLY_DISABLE_HOST_CHECK=true
-  #     - FAST_REFRESH=false
-  #     - CHOKIDAR_USEPOLLING=true
-  #     - WATCHPACK_POLLING=true
-  #   depends_on:
-  #     - app
-
-  # proxy:
-  #   hostname: proxy
-  #   build: proxy
-  #   image: local_image/rag-proxy
-  #   restart: always
-  #   ports:
-  #     - 80:80
-  #   networks:
-  #     - frontend-network
-  #   depends_on:
-  #     - web
+  proxy:
+    hostname: proxy
+    build: proxy
+    image: local_image/langora-proxy
+    restart: unless-stopped
+    ports:
+      - 80:80
+    networks:
+      - langora-frontend
+    environment:
+      - TZ=${TZ}
+    depends_on:
+      - web
 
   # redis: 
   #   hostname: redis
@@ -150,7 +143,20 @@ services:
   #   networks:
   #     - backend-network
   #   environment:
-  #     - TZ=Europe/Paris
+  #     - TZ=${TZ}
+
+  # rq-dashboard:
+  #   hostname: rq-dashboard
+  #   image: local_image/langora-app
+  #   restart: unless-stopped
+  #   ports:      
+  #     - 9181:9181
+  #   networks:
+  #     - langora-backend
+  #     - langora-frontend 
+  #   command: rq-dashboard -u redis://redis:${REDIS_PORT}
+  #   depends_on:
+  #     - redis
 
   # redisinsight:
   #   image: redislabs/redisinsight:latest
@@ -164,5 +170,5 @@ services:
   #     - redis
 
 networks:
-  backend-network:
-  frontend-network:
+  langora-backend:
+  langora-frontend:

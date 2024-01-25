@@ -8,8 +8,8 @@
             "name": "Python: test",
             "type": "python",
             "request": "launch",
-            "cwd": "${workspaceFolder}/langora", // set directory here
-            "program": "test.py",
+            "cwd": "${workspaceFolder}/langora/app", // set directory here
+            "program": "api.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }

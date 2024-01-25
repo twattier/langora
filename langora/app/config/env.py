@@ -25,7 +25,7 @@ class AppConfig:
 
     APIFY_API_TOKEN:str = ""
 
-    HUGGINGFACE_CACHE:str = "/huggingface"
+    HUGGINGFACE_CACHE:str = "/storage/huggingface"
     MODEL_TOKEN:str = "mistralai/Mistral-7B-Instruct-v0.1"
     MODEL_GEN:str = "mistralai/Mistral-7B-Instruct-v0.1"
     MODEL_EMBEDDINGS:str = "sentence-transformers/all-mpnet-base-v2"
@@ -83,7 +83,6 @@ Config = AppConfig(os.environ)
 # Force for local dev
 in_docker = os.environ.get('IN_DOCKER', False)
 if not in_docker:
-    Config.HUGGINGFACE_CACHE = "../storage/huggingface"
+    Config.HUGGINGFACE_CACHE = "../../storage/huggingface"
     Config.POSTGRES_HOST = "localhost"
-    # Config.REDIS_URL = "redis://localhost:6379"    
-    # Config.SOURCES_DIR = "../../documents"
+    # Config.REDIS_URL = "redis://localhost:6379"
