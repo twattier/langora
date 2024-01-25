@@ -37,14 +37,18 @@ class Source(Base):
     url: Mapped[str] = mapped_column(String, nullable=True)   
     site: Mapped[str] = mapped_column(String, nullable=True)
     title: Mapped[str] = mapped_column(String, nullable=True)
-    snippet: Mapped[str] = mapped_column(Text, nullable=True)
+    snippet: Mapped[str] = mapped_column(Text, nullable=True)    
+
     extract: Mapped[str] = mapped_column(Text, nullable=True)
-    date_created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    date_extract: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     summary: Mapped[str] = mapped_column(Text, nullable=True)
     date_summary: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     search_sources: Mapped[List["SearchSource"]] = relationship(back_populates="source", order_by='SearchSource.rank')
+
+    def get_name(self):
+        return f'{self.source.title} [{self.source.site}]'
 
     def document_extract(self)->Document:
         return Document(

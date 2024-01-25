@@ -38,32 +38,32 @@ services:
       - db
       # - redis
 
-  worker:
-    hostname: worker
-    image: local_image/langora-app
-    restart: unless-stopped
-    volumes:
-      - ./langora/app:/app
-      - ./storage:/storage
-    networks:
-      - langora-backend
-    environment:      
-      - TZ=${TZ}
-      - ENV
-      - DEBUG
-      - OPENAI_API_KEY
-      - GOOGLE_API_KEY
-      - GOOGLE_CSE_ID
-      - APIFY_API_TOKEN
-      - HUGGINGFACE_CACHE
-      - POSTGRES_HOST
-      - POSTGRES_PORT
-      - POSTGRES_USER
-      - POSTGRES_PASSWORD
-    command: python3 worker.py
-    depends_on:
-      - db
-      # - redis
+  # worker:
+  #   hostname: worker
+  #   image: local_image/langora-app
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./langora/app:/app
+  #     - ./storage:/storage
+  #   networks:
+  #     - langora-backend
+  #   environment:      
+  #     - TZ=${TZ}
+  #     - ENV
+  #     - DEBUG
+  #     - OPENAI_API_KEY
+  #     - GOOGLE_API_KEY
+  #     - GOOGLE_CSE_ID
+  #     - APIFY_API_TOKEN
+  #     - HUGGINGFACE_CACHE
+  #     - POSTGRES_HOST
+  #     - POSTGRES_PORT
+  #     - POSTGRES_USER
+  #     - POSTGRES_PASSWORD
+  #   command: python3 worker.py
+  #   depends_on:
+  #     - db
+  #     # - redis
 
   db:
     hostname: ${POSTGRES_HOST}

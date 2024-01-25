@@ -20,7 +20,7 @@ CONNECTION_STRING = PGVector.connection_string_from_db_params(
     password=Config.POSTGRES_PASSWORD
 )
 
-STORE = Enum('Store', ['SEARCH', 'SUMMARY', 'EXTRACT'])
+STORE = Enum('Store', ['SEARCH', 'EXTRACT', 'SUMMARY'])
 
 class DbVector():
     
@@ -116,6 +116,7 @@ class DbVector():
     # ---------------------------------------------------------------------------
 
     def recreate_database(self):
+        print(f'Clean Database if needed')
         #Carefull all data will be lost        
         for dm in ["knowledge", "search_source", "source", "search"]:
             query = text("DROP TABLE IF EXISTS " + dm)
@@ -123,6 +124,8 @@ class DbVector():
         for em in ["langchain_pg_collection", "langchain_pg_embedding"]:
             query = text("TRUNCATE " + em)
             self.execute(query)
+
+        print(f'Create schema')
         self.create_schema()    
 
     def create_schema(self):
@@ -197,30 +200,28 @@ class DbVector():
         for source in self.select_sources():
             self.store_source_embeddings(source)
         
-    def store_source_embeddings(self, source:Source)->None:
-        if not (source.summary or source.extract):
-            return
+    def store_source_embeddings(self, source:Source, type:STORE,
+                                chunk_size=1000)->None:
+        text = None
+        if type==STORE.EXTRACT:
+            text = source.extract
+        elif type==STORE.SUMMARY:
+            text = source.summary
+        if not text:
+            return        
+        
         #clean_embeddings
         query = text("""
                     DELETE
                     FROM langchain_pg_embedding
                     WHERE CAST(cmetadata->>'source_id' as integer) = %s
-                    """ % (source.id))
-                    # and collection_id in
-                    #  (select uuid from langchain_pg_collection where name in ('EXTRACT', 'SUMMARY'))
+                    and collection_id in
+                     (select uuid from langchain_pg_collection where name = %s)
+                    """ % (source.id, type.name))
         self.execute(query)
 
+        #Split
         metadata = {"source_id" : source.id}
-        if source.extract:
-            self.store_embeddings(source.extract, STORE.EXTRACT, metadata=metadata)
-        if source.summary:
-            self.store_embeddings(source.summary, STORE.SUMMARY, metadata=metadata)
-
-    # ---------------------------------------------------------------------------
-    # Utils
-
-    def store_embeddings(self, text:str, type:STORE, 
-                         metadata:dict={}, chunk_size=1000)->None:
         docs = self.split_text(text, chunk_size)
         idx = 0
         for doc in docs:            
@@ -228,6 +229,12 @@ class DbVector():
             doc.metadata = metadata.copy()
             doc.metadata['chunk'] = idx
         self.stores[type].add_documents(docs)
+
+        #Store
+        self.stores[type].add_documents(docs)
+
+    # ---------------------------------------------------------------------------
+    # Utils
 
     def split_text(self, text:str, chunk_size=1000)->list[Document]:
         text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
