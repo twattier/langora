@@ -7,7 +7,8 @@ from db.dbvector import DbVector, STORE
 class Langora():
     def __init__(self) -> None:                  
         self.db = DbVector()
-        self.model = ServiceModel(self.db)           
+        self.model = ServiceModel(self.db)
+        self.loader = ServiceLoader(self.model)        
 
     def init_services(self):
         self.db.init_stores()
@@ -18,13 +19,12 @@ class Langora():
     # ---------------------------------------------------------------------------
 
     def install_db_knowledge(self, agent:str, topics:list[str],
-                            up_to_store:STORE=STORE.SEARCH):
+                            up_to_store:STORE=STORE.SOURCE):
         try:            
             self.init_services()
-            self.db.open_session()                
-
-            loader = ServiceLoader(self.model, up_to_store=up_to_store)
-            loader.init_knowledge(agent, topics)
+            self.db.open_session()   
+            
+            self.loader.init_knowledge(agent, topics, up_to_store)
         finally:
             self.db.close_session()
     
