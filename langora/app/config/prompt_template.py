@@ -1,8 +1,8 @@
 
 #Generate query for google search
-knowledge_recommendations = """
+searches_recommended = """
     As {agent}
-    Provide the top 10 most common questions on the topics : {topics}
+    Provide the top 10 most common questions on the topic : {topic}
     Give only the questions, avoid any duplicate, format it as a JSON list.
     """
 

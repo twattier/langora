@@ -10,7 +10,7 @@ class Langora():
         self.model = ServiceModel(self.db)           
 
     def init_services(self):
-        self.db.init_db()
+        self.db.init_stores()
         self.model.init_model()        
 
     # ---------------------------------------------------------------------------
@@ -18,10 +18,10 @@ class Langora():
     # ---------------------------------------------------------------------------
 
     def install_db_knowledge(self, agent:str, topics:list[str],
-                            up_to_store:STORE=None):
-        try:
-            self.db.init_db()
-            self.db.open_session()    
+                            up_to_store:STORE=STORE.SEARCH):
+        try:            
+            self.init_services()
+            self.db.open_session()                
 
             loader = ServiceLoader(self.model, up_to_store=up_to_store)
             loader.init_knowledge(agent, topics)

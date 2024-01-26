@@ -15,24 +15,16 @@ class ServiceModel():
 
     def __init__(self, db:DbVector) -> None:        
         self.db = db
+        self.model = None
 
     def init_model(self):
         if Config.USE_OPENAI:            
             from llm.model_openai import ModelOpenAI
-            model = ModelOpenAI()
+            self.model = ModelOpenAI()
         else:
             from llm.model_local import ModelLocal
-            model = ModelLocal()
-            
-        model.init_model()
-        try:
-            self.db.open_session()
-            knowledge = self.db.select_knowledge()
-            model.agent = knowledge.agent
-            model.topics = knowledge.topics
-        finally:
-            self.db.close_session()
-        self.model = model
+            self.model = ModelLocal()            
+        self.model.init_model()
 
     # ---------------------------------------------------------------------------
     # Prompt
@@ -41,11 +33,15 @@ class ServiceModel():
     def submit_prompt(self, prompt:str):
         return self.model.llm(prompt)
 
-    def get_knowledge_recommendations(self):        
-        str_topics = list_to_string(self.model.topics)
-        prompt = PromptTemplate.from_template(template.knowledge_recommendations)
-        result = self.submit_prompt(prompt.format(agent=self.model.agent, topics=str_topics))
-        list = json.loads(result)
+    def get_topic_searches_recommended(self, topic_name:str):        
+        prompt = PromptTemplate.from_template(template.searches_recommended)
+        knowledge = self.db.select_knowledge()        
+        result = self.submit_prompt(prompt.format(agent=knowledge.agent, topic=topic_name))
+        try:
+            list = json.loads(result)
+        except:
+            print("LLM Error : incorrect generated JSON")
+            return []
         return list
 
     # ---------------------------------------------------------------------------

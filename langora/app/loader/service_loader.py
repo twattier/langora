@@ -3,7 +3,7 @@ from alive_progress import alive_bar
 
 from config.env import Config
 from db.dbvector import DbVector, STORE
-from db.datamodel import Knowledge, Search, Source, SearchSource
+from db.datamodel import Knowledge, Topic, Search, Source, SearchSource
 from llm.service_model import ServiceModel
 from loader.google_search import google_search
 from utils.functions import get_url_hostname
@@ -14,8 +14,7 @@ class ServiceLoader():
                  up_to_store:STORE = None,
                  use_task_mode=False) -> None:
         self.model = model
-        self.db = model.db
-        self.stage_store = None
+        self.db = model.db        
         self.up_to_store = up_to_store
         self.use_task_mode = use_task_mode
         self.init_loader()
@@ -34,59 +33,101 @@ class ServiceLoader():
     # Source import
     # ---------------------------------------------------------------------------
     
-    def continue_loading(self)->bool:
+    def continue_loading(self, step:STORE)->bool:
         if not self.up_to_store:
-            return False
-        if not self.stage_store:
-            return True
-        return self.up_to_store.value>self.stage_store
+            return False        
+        return self.up_to_store.value>=step.value
 
     def init_knowledge(self, agent:str, topics:list[str])->None:
         """Create the database 
             + Create the Knowledge object
-            + Add recommended search
+            + Add recommended search + recommended topic
             + (optional create source -> extract -> summarized them)
         """
         self.db.recreate_database()        
-        knowledge = Knowledge(agent=agent, topics=topics)
+        knowledge = Knowledge(agent=agent)
         self.db.add(knowledge)
-        self.db.save()        
-        
-        # self.model.db = self.db
-        # self.model.init_model()
-        self.add_search_recommendations()
-
-    def add_search_recommendations(self)->None:
-        self.model.init_model() 
-
-        print(f'Add search recommendations')
-        new_searches = []
-        for query in self.model.get_knowledge_recommendations(self.model):
-            search = self.db.select_search_by_query(query)
-            if search:
-                continue
-            search=Search(query=query.strip(), from_user=False)
-            self.db.add(search)
-            new_searches.append(search)
-            self.db.store_search_embeddings(search)
         self.db.save()
         
-        if self.continue_loading():
-            for search in new_searches:            
-                self.import_google_search(search)
-    
-    def import_search_recommendations(self)->None:        
-        for search in self.db.select_searches_recommended():
-            self.import_google_search(search)
+        self.add_topics(topics)
 
     # ---------------------------------------------------------------------------
-    # Google research
+    # Topics
+        
+    def add_topics(self, names:list[str])->None:        
+        print('Add topics :')
+        new_topics = []
+        for name in names:
+            #TODO check duplicate similarity
+            print(f'- Add : {name}')
+            topic = Topic(name=name)
+            self.db.add(topic)            
+            new_topics.append(topic)        
+        self.db.save()
+        
+        print('Embeddings topics :')
+        for topic in new_topics:
+            self.db.store_topic_embeddings(topic) #TODO manage list
+
+        if self.continue_loading(STORE.SEARCH):
+            for topic in new_topics:
+                self.add_topic_searches_recommended(topic)
+
     # ---------------------------------------------------------------------------
+    # Search
 
-    def import_google_search(self, search:Search)->None:
-        print(f'Google search : "{search.query}"')
-        self.stage_store = STORE.SEARCH
+    def add_topic_searches_recommended(self, topic:Topic)->None:
+        print(f'Add searches recommended for : {topic.name}')     
+        queries = self.model.get_topic_searches_recommended(topic.name)
+        self.add_searches(queries, topic=topic)
 
+    def add_searches(self, queries:list[str], topic:Topic=None)->None:
+        print(f'Add searches :')
+        new_searches = []
+        with alive_bar(len(queries)) as bar:        
+            for query in queries:
+                #TODO check duplicate similarity query
+                search = self.db.select_search_by_query(query)
+                if search:
+                    print(f'- Skip : {query}')
+                else:
+                    print(f'- Add : {query}')
+                    search=Search(query=query)
+                    self.db.add(search)
+                    new_searches.append(search)                    
+                if topic and topic not in search.topics:
+                    search.topics.append(topic)
+                    #TODO complete with identified topics (handle similarity topic)
+                bar()
+
+        self.db.save()
+        print('Embeddings searches :')
+        for search in new_searches:
+            self.db.store_search_embeddings(search) #TODO manage list
+        
+        if not self.continue_loading(STORE.SOURCE):
+            return
+        new_sources = []
+        for search in new_searches:
+            new_sources.extend(self.add_sources(search))
+
+        if not self.continue_loading(STORE.SRC_EXTRACT):
+            return
+        update_sources = self.extract_sources(new_sources)
+
+        if not self.continue_loading(STORE.SRC_SUMMARY):
+            return
+        self.summarize_sources(update_sources)
+
+    # ---------------------------------------------------------------------------
+    # Source
+                
+    def update_sources(self)->None:        
+        for search in self.db.select_searches():
+            self.add_sources(search)
+
+    def add_sources(self, search:Search)->None:
+        print(f'Add sources for : "{search.query}"')
         results = google_search(search.query)
         nb_results = len(results)
         new_sources = []
@@ -113,19 +154,16 @@ class ServiceLoader():
                 search.search_sources.append(
                     SearchSource(source=source, rank=rank+1)
                 )                
-                bar()
-            
+                bar()            
         self.db.save()
-        
-        if self.continue_loading():
-            self.extract_sources(new_sources)
+        return new_sources
 
-    def extract_sources(self, sources:list[Source])->None:
+    def extract_sources(self, sources:list[Source])->list[Source]:
+        update_sources = []
         nb = len(sources)
         if nb == 0:
-            return        
+            return update_sources
         print('Extract Sources :')
-        self.stage_store = STORE.EXTRACT
         with alive_bar(nb) as bar:
             for source in sources:
                 if source.extract:
@@ -135,19 +173,18 @@ class ServiceLoader():
                 print(f'- Extract : {source.get_name()}')
                 source.extract = self.loader.load_web(source.url).page_content
                 source.date_extract = datetime.now()                
+                update_sources.append(source)
                 self.db.save()
-                self.db.store_source_embeddings(source, STORE.EXTRACT)
+                self.db.store_source_embeddings(source, STORE.SRC_EXTRACT)
                 bar()
+        return update_sources
         
-        if self.continue_loading():
-            self.summarize_sources(sources)
-
-    def summarize_sources(self, sources:list[Source]):
+    def summarize_sources(self, sources:list[Source])->list[Source]:
+        update_sources = []
         nb = len(sources)
         if nb == 0:
-            return
+            return update_sources
         print(f'Summarize sources :') 
-        self.stage_store = STORE.SUMMARY
         with alive_bar(nb) as bar:
             for source in sources:
                 if source.summary:
@@ -158,9 +195,11 @@ class ServiceLoader():
                 try:
                     doc = source.document_extract()
                     source.summary = self.model.summarize(doc)
-                    source.date_summary = datetime.now()                    
+                    source.date_summary = datetime.now()      
+                    update_sources.append(source)              
                     self.db.save()
-                    self.db.store_source_embeddings(source, STORE.SUMMARY)
+                    self.db.store_source_embeddings(source, STORE.SRC_SUMMARY)
                 except Exception as error:
                     print("An error occurred:", error)
                 bar()
+        return update_sources

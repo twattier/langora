@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, select, text, func
 from sqlalchemy.orm import Session
 
 from config.env import Config
-from .datamodel import Base, Knowledge, Search, Source
+from .datamodel import Base, Topic, Knowledge, Search, Source
 
 CONNECTION_STRING = PGVector.connection_string_from_db_params(
     driver="psycopg2",
@@ -20,7 +20,7 @@ CONNECTION_STRING = PGVector.connection_string_from_db_params(
     password=Config.POSTGRES_PASSWORD
 )
 
-STORE = Enum('Store', ['SEARCH', 'EXTRACT', 'SUMMARY'])
+STORE = Enum('Store', ['TOPIC', 'SEARCH', 'SOURCE', 'SRC_EXTRACT', 'SRC_SUMMARY'])
 
 class DbVector():
     
@@ -29,10 +29,6 @@ class DbVector():
         self.session = None
         self.embeddings = None
         self.stores = None
-
-    def init_db(self):
-        self.init_embeddings()
-        self.init_stores()
 
     def init_embeddings(self):
         if self.embeddings:
@@ -45,8 +41,8 @@ class DbVector():
             return        
         self.init_embeddings()
         self.stores = {}
-        for store in STORE:            
-            self.stores[store] = PGVector(
+        for store in [STORE.TOPIC, STORE.SEARCH, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY]:            
+            self.stores[store.name] = PGVector(
                             collection_name=store.name,
                             connection_string=CONNECTION_STRING,
                             embedding_function=self.embeddings,
@@ -81,10 +77,6 @@ class DbVector():
         stmt = select(Search).where(func.lower(Search.query)==func.lower(query))
         return self.select_one(stmt)
     
-    def select_searches_recommended(self)->list[Search]:
-        stmt = select(Search).where(Search.from_user==False)
-        return self.select_many(stmt)
-    
     def select_searches(self)->list[Search]:
         stmt = select(Search)
         return self.select_many(stmt)
@@ -116,19 +108,20 @@ class DbVector():
     # ---------------------------------------------------------------------------
 
     def recreate_database(self):
-        print(f'Clean Database if needed')
-        #Carefull all data will be lost        
-        for dm in ["knowledge", "search_source", "source", "search"]:
-            query = text("DROP TABLE IF EXISTS " + dm)
-            self.execute(query)
-        for em in ["langchain_pg_collection", "langchain_pg_embedding"]:
-            query = text("TRUNCATE " + em)
-            self.execute(query)
+        self.clean_database()        
+        self.create_schema()
 
-        print(f'Create schema')
-        self.create_schema()    
+    def clean_database(self):
+        print('Clean Database if needed')       
+        for dm in ["knowledge", "search_topic", "topic", "search_source", "source", "search"]:
+            query = "DROP TABLE IF EXISTS " + dm
+            self.raw_execute(query)
+        for em in ["langchain_pg_embedding"]: #, "langchain_pg_collection"]:
+            query = "TRUNCATE " + em
+            self.raw_execute(query)        
 
     def create_schema(self):
+        print('Create schema')
         Base.metadata.create_all(self.engine)
 
     def exists(self, table, **kargs):
@@ -139,13 +132,6 @@ class DbVector():
             criteria = str(value) if isinstance(value, numbers.Number) else f"'{value}'"
         stmt = text(f"SELECT 1 from {table} WHERE {criteria}")
         return self.session.execute(stmt).first() != None
-
-    def execute(self, stmt)->None:        
-        try:
-            self.session.execute(stmt)
-            self.session.commit()
-        except:
-            print("SQL Execute Error : " + stmt.text)
 
     def select_one(self, stmt):        
         return self.session.execute(stmt).scalar_one_or_none()
@@ -168,10 +154,39 @@ class DbVector():
               .format(nb_new, nb_update, nb_delete))        
         self.session.commit()
 
+    def raw_execute(self, query:str)->None:
+        try:
+            connection = self.engine.raw_connection()
+            cursor = connection.cursor()
+            command = query
+            cursor.execute(command)
+            connection.commit()            
+        except:
+            print("SQL Execute Error : " + query)
+        finally:
+            cursor.close()
+
     # ---------------------------------------------------------------------------
     # EMBEDDINGS
     # ---------------------------------------------------------------------------
+
+    # ---------------------------------------------------------------------------
+    # Topic
         
+    def store_topic_embeddings(self, topic:Topic)->None:
+        #clean_embeddings
+        query = """
+                DELETE
+                FROM langchain_pg_embedding
+                WHERE CAST(cmetadata->>'topic_id' as integer) = %s
+                """ % (topic.id)
+        self.raw_execute(query)
+        
+        doc = Document(
+                page_content=topic.name, metadata={"topic_id": topic.id}
+            )
+        self.stores[STORE.TOPIC.name].add_documents([doc])
+            
     # ---------------------------------------------------------------------------
     # Search
         
@@ -181,17 +196,17 @@ class DbVector():
         
     def store_search_embeddings(self, search:Search)->None:
         #clean_embeddings
-        query = text("""
-                    DELETE
-                    FROM langchain_pg_embedding
-                    WHERE CAST(cmetadata->>'search_id' as integer) = %s
-                    """ % (search.id))
-        self.execute(query)
+        query = """
+                DELETE
+                FROM langchain_pg_embedding
+                WHERE CAST(cmetadata->>'search_id' as integer) = %s
+                """ % (search.id)
+        self.raw_execute(query)
         
         doc = Document(
                 page_content=search.query, metadata={"search_id": search.id}
             )
-        self.stores[STORE.SEARCH].add_documents([doc])
+        self.stores[STORE.SEARCH.name].add_documents([doc])
 
     # ---------------------------------------------------------------------------
     # Sources
@@ -211,14 +226,14 @@ class DbVector():
             return        
         
         #clean_embeddings
-        query = text("""
-                    DELETE
-                    FROM langchain_pg_embedding
-                    WHERE CAST(cmetadata->>'source_id' as integer) = %s
-                    and collection_id in
-                     (select uuid from langchain_pg_collection where name = %s)
-                    """ % (source.id, type.name))
-        self.execute(query)
+        query = """
+                DELETE
+                FROM langchain_pg_embedding
+                WHERE CAST(cmetadata->>'source_id' as integer) = %s
+                and collection_id in
+                    (select uuid from langchain_pg_collection where name = %s)
+                """ % (source.id, type.name)
+        self.raw_execute(query)
 
         #Split
         metadata = {"source_id" : source.id}
@@ -228,10 +243,10 @@ class DbVector():
             idx += 1
             doc.metadata = metadata.copy()
             doc.metadata['chunk'] = idx
-        self.stores[type].add_documents(docs)
+        self.stores[type.name].add_documents(docs)
 
         #Store
-        self.stores[type].add_documents(docs)
+        self.stores[type.name].add_documents(docs)
 
     # ---------------------------------------------------------------------------
     # Utils
@@ -248,6 +263,6 @@ class DbVector():
     
     def similarity_search(self, text:str, type:STORE, 
                           nb=5):
-        return self.stores[type].similarity_search_with_relevance_scores(text, k=nb)        
+        return self.stores[type.name].similarity_search_with_relevance_scores(text, k=nb)        
         
     

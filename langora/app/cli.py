@@ -48,7 +48,7 @@ if __name__ == '__main__':
     parser_install.add_argument('-t', '--topics', help="List of topics", nargs='+', required=True)
     #Option 
     parser_install.add_argument('-l', '--load', help="Import level search[DEFAULT]->source->extract->summary",
-                                choices=['source', 'extract', 'summary'])    
+                                choices=['search', 'source', 'extract', 'summary'])    
 
     args = parser.parse_args()
     # ---------------------------------------------------------------------------
@@ -57,10 +57,10 @@ if __name__ == '__main__':
     if args.command == 'install':         
         if not query_yes_no('Are you sure ? It will erase all the database', default='no'):
             sys.exit()
-        up_to_store = None
-        if args.load.tolower() == 'source': up_to_store = STORE.SEARCH
-        elif args.load.tolower() == 'extract': up_to_store = STORE.EXTRACT
-        elif args.load.tolower() == 'summary': up_to_store = STORE.SUMMARY
+        up_to_store = STORE.SEARCH
+        if args.load.tolower() == 'source': up_to_store = STORE.SOURCE
+        elif args.load.tolower() == 'extract': up_to_store = STORE.SRC_EXTRACT
+        elif args.load.tolower() == 'summary': up_to_store = STORE.SRC_SUMMARY
         
         app = Langora()        
         app.install_db_knowledge(args.agent, args.topics, 
