@@ -3,7 +3,7 @@ from transformers import GenerationConfig, pipeline
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 import torch
 
-from .model import Model
+from llm.model import Model
 from config.env import Config
 
 class ModelLocal(Model):

@@ -1,6 +1,6 @@
 from langchain_openai import OpenAI
 
-from .model import Model
+from llm.model import Model
 
 class ModelOpenAI(Model):
     def __init__(self) -> None:   

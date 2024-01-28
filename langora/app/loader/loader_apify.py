@@ -1,6 +1,6 @@
 from langchain_community.utilities import ApifyWrapper
 
-from .loader_web import LoaderWeb, Document
+from loader.loader_web import LoaderWeb, Document
 
 class LoaderApify(LoaderWeb):
     def load_web(self, url:str)->Document:
@@ -13,4 +13,6 @@ class LoaderApify(LoaderWeb):
             ),
         )        
         docs = loader.load()
+        if not docs or len(docs) ==0:
+            return None
         return docs[0]

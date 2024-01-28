@@ -36,11 +36,9 @@ class AppConfig:
     POSTGRES_USER:str = "vectoruser"
     POSTGRES_PASSWORD:str = "vectorpwd"
 
-    # REDIS_URL:str = "redis://localhost:6379"
-    # REDIS_QUEUE:str="app-rag-task"
-    # REDIS_CHANNEL:str="app-rag-msg"
-    
-    # SOURCES_DIR:str = "/documents"    
+    REDIS_URL:str = "redis://redis:6379"
+    REDIS_QUEUE:str = "langora-task"
+    REDIS_CHANNEL:str = "langora-msg"
 
     """
     Map environment variables to class fields according to these rules:
@@ -85,4 +83,4 @@ in_docker = os.environ.get('IN_DOCKER', False)
 if not in_docker:
     Config.HUGGINGFACE_CACHE = "../../storage/huggingface"
     Config.POSTGRES_HOST = "localhost"
-    # Config.REDIS_URL = "redis://localhost:6379"
+    Config.REDIS_URL = "redis://localhost:6379"

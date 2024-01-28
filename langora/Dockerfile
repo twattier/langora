@@ -13,4 +13,8 @@ RUN pip3 install -r requirements.txt
 #playwright (chromium install)
 RUN playwright install
 
+#supervisor
+RUN apt-get update && apt-get install -y supervisor
+ADD app/task/supervisord.conf /etc/supervisor/
+
 ENV IN_DOCKER Yes

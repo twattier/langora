@@ -8,7 +8,6 @@ from langchain.chains.llm import LLMChain
 
 from config.env import Config
 from config import prompt_template as template
-from utils.functions import list_to_string
 from db.dbvector import DbVector
 
 class ServiceModel():

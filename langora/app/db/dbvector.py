@@ -5,11 +5,11 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
-from sqlalchemy import create_engine, select, text, func
+from sqlalchemy import create_engine, select, text, func, and_
 from sqlalchemy.orm import Session
 
 from config.env import Config
-from .datamodel import Base, Topic, Knowledge, Search, Source
+from db.datamodel import Base, Topic, Knowledge, Search, Source
 
 CONNECTION_STRING = PGVector.connection_string_from_db_params(
     driver="psycopg2",
@@ -67,11 +67,29 @@ class DbVector():
     # ---------------------------------------------------------------------------
 
     # ---------------------------------------------------------------------------
+    # Knowledge
+    
+    def select_knowledge(self)->Knowledge:
+        stmt = select(Knowledge)
+        return self.select_one(stmt)
+    
+    # ---------------------------------------------------------------------------
+    # Topic
+    
+    def select_topics_by_ids(self, ids:list[int])->list[Topic]:
+        stmt = select(Topic).where(Topic.id.in_(ids))
+        return self.select_many(stmt)
+
+    # ---------------------------------------------------------------------------
     # Search 
         
     def select_search_by_id(self, id:int)->Search:
         stmt = select(Search).where(Search.id==id)
         return self.select_one(stmt)
+    
+    def select_searches_by_ids(self, ids:list[int])->list[Topic]:
+        stmt = select(Search).where(Search.id.in_(ids))
+        return self.select_many(stmt)
         
     def select_search_by_query(self, query)->Search:
         stmt = select(Search).where(func.lower(Search.query)==func.lower(query))
@@ -96,12 +114,15 @@ class DbVector():
         stmt = select(Source)
         return self.select_many(stmt)
     
-    # ---------------------------------------------------------------------------
-    # Knowledge
+    def select_not_extracted_sources(self)->list[Source]:
+        stmt = select(Source).where(Source.extract == None)
+        return self.select_many(stmt)
     
-    def select_knowledge(self)->Knowledge:
-        stmt = select(Knowledge)
-        return self.select_one(stmt)
+    def select_not_summarized_sources(self)->list[Source]:
+        stmt = select(Source).where(
+            and_(Source.extract != None, Source.summary == None)
+            )
+        return self.select_many(stmt)
 
     # ---------------------------------------------------------------------------
     # Utils SqlAlchemy
@@ -218,9 +239,9 @@ class DbVector():
     def store_source_embeddings(self, source:Source, type:STORE,
                                 chunk_size=1000)->None:
         text = None
-        if type==STORE.EXTRACT:
+        if type==STORE.SRC_EXTRACT:
             text = source.extract
-        elif type==STORE.SUMMARY:
+        elif type==STORE.SRC_SUMMARY:
             text = source.summary
         if not text:
             return        
@@ -231,7 +252,7 @@ class DbVector():
                 FROM langchain_pg_embedding
                 WHERE CAST(cmetadata->>'source_id' as integer) = %s
                 and collection_id in
-                    (select uuid from langchain_pg_collection where name = %s)
+                    (select uuid from langchain_pg_collection where name = '%s')
                 """ % (source.id, type.name)
         self.raw_execute(query)
 

@@ -1,7 +1,7 @@
 from langchain_community.document_loaders import AsyncChromiumLoader
 from langchain_community.document_transformers import Html2TextTransformer
 
-from .loader_web import LoaderWeb, Document
+from loader.loader_web import LoaderWeb, Document
 
 class LoaderHtml2Text(LoaderWeb):
     def load_web(self, url:str)->Document:

@@ -30,40 +30,43 @@ services:
       - POSTGRES_PORT
       - POSTGRES_USER
       - POSTGRES_PASSWORD
-      # - REDIS_URL
-      # - REDIS_QUEUE
-      # - REDIS_CHANNEL
+      - REDIS_URL
+      - REDIS_QUEUE
+      - REDIS_CHANNEL
     command: python3 api.py
     depends_on:
       - db
-      # - redis
+      - redis
 
-  # worker:
-  #   hostname: worker
-  #   image: local_image/langora-app
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ./langora/app:/app
-  #     - ./storage:/storage
-  #   networks:
-  #     - langora-backend
-  #   environment:      
-  #     - TZ=${TZ}
-  #     - ENV
-  #     - DEBUG
-  #     - OPENAI_API_KEY
-  #     - GOOGLE_API_KEY
-  #     - GOOGLE_CSE_ID
-  #     - APIFY_API_TOKEN
-  #     - HUGGINGFACE_CACHE
-  #     - POSTGRES_HOST
-  #     - POSTGRES_PORT
-  #     - POSTGRES_USER
-  #     - POSTGRES_PASSWORD
-  #   command: python3 worker.py
-  #   depends_on:
-  #     - db
-  #     # - redis
+  worker:
+    hostname: worker
+    image: local_image/langora-app
+    restart: unless-stopped
+    volumes:
+      - ./langora/app:/app
+      - ./storage:/storage
+    networks:
+      - langora-backend
+    environment:      
+      - TZ=${TZ}
+      - ENV
+      - DEBUG
+      - OPENAI_API_KEY
+      - GOOGLE_API_KEY
+      - GOOGLE_CSE_ID
+      - APIFY_API_TOKEN
+      - HUGGINGFACE_CACHE
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - REDIS_URL
+      - REDIS_QUEUE
+      - REDIS_CHANNEL
+    command: /usr/bin/supervisord
+    depends_on:
+      - db
+      - redis
 
   db:
     hostname: ${POSTGRES_HOST}
@@ -78,7 +81,7 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ./storage/db/data:/var/lib/postgresql/data
+      - ./storage/db/db-data:/var/lib/postgresql/data
       - ./storage/db/init.sql:/docker-entrypoint-initdb.d/init.sql      
     networks:
       - langora-backend
@@ -111,10 +114,10 @@ services:
       - ENV
       - DEBUG
       - API_URL
-      # - DANGEROUSLY_DISABLE_HOST_CHECK=true
-      # - FAST_REFRESH=false
-      # - CHOKIDAR_USEPOLLING=true
-      # - WATCHPACK_POLLING=true
+      #dev recompile on change
+      - FAST_REFRESH=false
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     depends_on:
       - api
 
@@ -132,31 +135,18 @@ services:
     depends_on:
       - web
 
-  # redis: 
-  #   hostname: redis
-  #   image: redis/redis-stack-server:latest
-  #   restart: always
-  #   ports:
-  #     - ${REDIS_PORT}:6379
-  #   volumes:
-  #     - ./db/redis-data:/data
-  #   networks:
-  #     - backend-network
-  #   environment:
-  #     - TZ=${TZ}
-
-  # rq-dashboard:
-  #   hostname: rq-dashboard
-  #   image: local_image/langora-app
-  #   restart: unless-stopped
-  #   ports:      
-  #     - 9181:9181
-  #   networks:
-  #     - langora-backend
-  #     - langora-frontend 
-  #   command: rq-dashboard -u redis://redis:${REDIS_PORT}
-  #   depends_on:
-  #     - redis
+  redis: 
+    hostname: redis
+    image: redis/redis-stack-server:latest
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./storage/db/redis-data:/data
+    networks:
+      - langora-backend
+    environment:
+      - TZ=${TZ}
 
   # redisinsight:
   #   image: redislabs/redisinsight:latest
