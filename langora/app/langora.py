@@ -1,4 +1,4 @@
-from flask_marshmallow.sqla import SQLAlchemySchema
+from langchain_core.documents import Document
 
 from loader.service_loader import ServiceLoader
 from llm.service_model import ServiceModel
@@ -80,4 +80,18 @@ class Langora():
     # API function
     # ---------------------------------------------------------------------------
         
+    def genAI(self, query, nb_extract=3, nb_ref=5):
+
+        sim_docs, sim_sources = self.db.similarity_sources_extract(query, nb=nb_extract)
+        if len(sim_sources)>nb_ref:
+            sim_sources = sim_sources[:nb_ref]
+        sim_searches = self.db.similarity_searches(query)
+        docs = []
+        for ss in sim_docs:
+            docs.append(Document(page_content=ss.doc_text))
+        response = self.model.rag(query, docs)
+        
+        return response, sim_docs, sim_sources, sim_searches
+
+
     

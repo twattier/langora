@@ -1,5 +1,5 @@
 import { createTheme } from '@mui/material/styles'
-import { indigo } from '@mui/material/colors';
+import { indigo } from '@mui/material/colors'
 
 export const layout = {
   bannerHeight: 100,
@@ -10,7 +10,7 @@ export const colors = {
   dark: '#a9a9a9',
 }
 
-let theme = createTheme({
+export const theme = createTheme({
   palette: {
     primary: indigo,
     secondary: {
@@ -23,22 +23,31 @@ let theme = createTheme({
       primary: '#000000',
     },
     dark: {
-      main: "#a9a9a9",
-      contrastText: "#fff",
-    }
+      main: '#a9a9a9',
+      contrastText: '#fff',
+    },
   },
-})
-
-theme = createTheme(theme, {  
   components: {
-    MuiBox: {
+    MuiGridItem: {
       styleOverrides: {
         root: {
-          borderRadius: 1,
-          borderColor: theme.palette.dark.main, //notworking
+          paddingLeft: 0,
+          paddingTop: 0,
         },
       },
     },
   },
 })
-export default theme
+
+// theme = createTheme(theme, {
+//   components: {
+//     MuiGridItem: {
+//       styleOverrides: {
+//         root: {
+//           paddingLeft: 0,
+//           paddingTop: 0,
+//         },
+//       },
+//     },
+//   },
+// })

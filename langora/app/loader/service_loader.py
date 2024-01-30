@@ -215,6 +215,10 @@ class ServiceLoader(QueueTask):
                 bar()
         self.db.save()
 
+        print('Embeddings sources')
+        for source in new_sources:
+            self.db.store_source_embeddings(source, STORE.SOURCE)
+
         if up_to_store and not self.is_task_mode:
             self.chain_loader(new_sources, STORE.SOURCE, up_to_store)
 

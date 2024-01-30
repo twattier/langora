@@ -14,7 +14,7 @@ apify-client
 psycopg2-binary
 pgvector
 sqlalchemy
-# #LLM local
+#LLM local
 transformers
 sentence-transformers
 bitsandbytes

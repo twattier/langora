@@ -1,5 +1,6 @@
 import numbers
 from enum import Enum
+from copy import deepcopy
 from langchain.vectorstores.pgvector import PGVector
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -9,7 +10,7 @@ from sqlalchemy import create_engine, select, text, func, and_
 from sqlalchemy.orm import Session
 
 from config.env import Config
-from db.datamodel import Base, Topic, Knowledge, Search, Source
+from db.datamodel import Base, Topic, Knowledge, Search, Source, SearchSource
 
 CONNECTION_STRING = PGVector.connection_string_from_db_params(
     driver="psycopg2",
@@ -21,6 +22,45 @@ CONNECTION_STRING = PGVector.connection_string_from_db_params(
 )
 
 STORE = Enum('Store', ['TOPIC', 'SEARCH', 'SOURCE', 'SRC_EXTRACT', 'SRC_SUMMARY'])
+
+class SimilaritySearch():
+    def __init__(self, search:Search, score_query:float) -> None:
+        self.search = search
+        self.score_query = score_query
+
+class SimilaritySource():
+    def __init__(self, source:Source) -> None:
+        self.source = source
+        self.scores:dict[STORE, float] = {}
+        self.doc_score:float = None
+        self.doc_type:str = None
+        self.doc_chunk:int = None
+        self.doc_text:str = None
+    
+    def set_score_src(self, store:STORE, value:float):
+        prev = self.scores.get(store)
+        if prev and prev>value:
+            return
+        self.scores[store] = value
+
+    def score_title(self):
+        return self.scores.get(STORE.SOURCE)
+    def score_summary(self):
+        return self.scores.get(STORE.SRC_SUMMARY)
+
+    def score_src(self)->float:
+        if len(self.scores)==0:
+            return None
+        return max(list(self.scores.values()))
+    
+    def score_total(self)->float:
+        """ doc score + weighting on src score (1/3) """
+        if not self.doc_score:
+            return 0
+        vsrc = self.score_src()
+        weight = vsrc/3 if vsrc else 1
+        return self.doc_score * (1 + weight)
+
 
 class DbVector():
     
@@ -41,7 +81,7 @@ class DbVector():
             return        
         self.init_embeddings()
         self.stores = {}
-        for store in [STORE.TOPIC, STORE.SEARCH, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY]:            
+        for store in [STORE.SEARCH, STORE.SOURCE, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY]:            
             self.stores[store.name] = PGVector(
                             collection_name=store.name,
                             connection_string=CONNECTION_STRING,
@@ -99,6 +139,11 @@ class DbVector():
         stmt = select(Search)
         return self.select_many(stmt)
     
+    def select_top_searches(self, max=5)->list[Source]:
+        stmt = select(Search, func.count(SearchSource.source_id).label('total')) \
+                .join(Source.search_sources).group_by(Search).order_by(text('total DESC')).limit(max)
+        return self.select_many(stmt)    
+    
     # ---------------------------------------------------------------------------
     # Sources
 
@@ -112,6 +157,11 @@ class DbVector():
     
     def select_sources(self)->list[Source]:
         stmt = select(Source)
+        return self.select_many(stmt)
+    
+    def select_top_sources(self, max=5)->list[Source]:
+        stmt = select(Source, func.count(SearchSource.search_id).label('total')) \
+                .join(Source.search_sources).group_by(Source).order_by(text('total DESC')).limit(max)
         return self.select_many(stmt)
     
     def select_not_extracted_sources(self)->list[Source]:
@@ -239,7 +289,9 @@ class DbVector():
     def store_source_embeddings(self, source:Source, type:STORE,
                                 chunk_size=1000)->None:
         text = None
-        if type==STORE.SRC_EXTRACT:
+        if type==STORE.SOURCE:
+            text = source.title
+        elif type==STORE.SRC_EXTRACT:
             text = source.extract
         elif type==STORE.SRC_SUMMARY:
             text = source.summary
@@ -263,8 +315,8 @@ class DbVector():
         for doc in docs:            
             idx += 1
             doc.metadata = metadata.copy()
-            doc.metadata['chunk'] = idx
-        self.stores[type.name].add_documents(docs)
+            if len(docs)>1:
+                doc.metadata['chunk'] = idx        
 
         #Store
         self.stores[type.name].add_documents(docs)
@@ -282,8 +334,80 @@ class DbVector():
         doc = Document(page_content=text)
         return text_splitter.split_documents([doc])
     
-    def similarity_search(self, text:str, type:STORE, 
-                          nb=5):
-        return self.stores[type.name].similarity_search_with_relevance_scores(text, k=nb)        
+    def similarities(self, text:str, type:STORE, 
+                     nb=5)->(Document, float):
+        return self.stores[type.name].similarity_search_with_relevance_scores(text, k=nb)   
+
+    def similarities_ids(self, text:str, type:STORE, 
+                                nb=5)->dict[int, float]:
+        sims = self.similarities(text, type, nb)
+        ids = {}
+        for sim in sims:
+            doc = sim[0]
+            id = doc.metadata['search_id'] if type == STORE.SEARCH else doc.metadata['source_id']
+            ids[id] = sim[1]
+        return ids     
         
+    def similarity_searches(self, text:str, nb=5)->list[SimilaritySearch]:
+        sims = self.similarities(text, STORE.SEARCH, nb)
+        list = []
+        for sim in sims:            
+            doc = sim[0]
+            score_query = sim[1]
+            id = doc.metadata['search_id']
+            search = self.select_search_by_id(id)
+            list.append(SimilaritySearch(search, score_query))
+        return list
+
+    def similarity_sources(self, text:str,
+                           nb=5)->list[SimilaritySource]:
+        dict = {}
+        for store in [STORE.SOURCE, STORE.SRC_SUMMARY]:
+            sims = self.similarities_ids(text, store, nb=nb*4)
+            for id, score in sims.items():
+                ss = dict.get(id)
+                if not ss:
+                    source = self.select_source_by_id(id)
+                    ss = SimilaritySource(source)
+                    dict[id] = ss
+                ss.set_score_src(store, score)
+        lss = list(dict.values())
+        lss.sort(key=lambda ss: ss.score_src(), reverse=True)
+        if len(lss)>nb:
+            lss = lss[:nb]
+        return lss
     
+    def similarity_sources_extract(self, text:str,
+                                   nb=5)->(list[SimilaritySource], list[SimilaritySource]):
+        sims = self.similarity_sources(text, nb=nb*5)
+        sims_extract = self.similarities(text, STORE.SRC_EXTRACT, nb=nb*10)
+        list = []
+        for sim in sims_extract:
+            doc = sim[0]
+            score = sim[1]
+            id = doc.metadata['source_id']
+            chunk = doc.metadata.get('chunk')
+            sim_src = self.seek_similarity_sources(id, sims)
+            if not sim_src:
+                continue
+            sim_doc = deepcopy(sim_src)
+            sim_doc.doc_type = "Extract"
+            sim_doc.doc_text = doc.page_content
+            if chunk:
+                sim_doc.doc_chunk = int(chunk)
+            sim_doc.doc_score = score
+            list.append(sim_doc)
+
+        #TODO manage if len<nb or add all sims_extract
+            
+        list.sort(key=lambda ss: ss.score_total(), reverse=True)
+        if len(list)>nb:
+            list = list[:nb]
+        return list, sims
+
+    def seek_similarity_sources(self, source_id:int, list:list[SimilaritySource])->SimilaritySource:
+        for ss in list:
+            if ss.source.id == source_id:
+                return ss
+        return None
+            

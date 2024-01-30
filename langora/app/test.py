@@ -12,7 +12,11 @@ try:
         
     app.init_store_model()
     app.db.open_session()   
-    app.loader.update_extract_sources()
+
+    # app.loader.update_extract_sources()
+
+
+
     
 finally:
     app.db.close_session()

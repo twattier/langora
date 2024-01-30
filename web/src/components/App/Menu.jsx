@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import {ContentBox} from '../utils/style/component'
+import {ContentBox} from '../../utils/style/component'
 
 export default function Menu() {
   return (

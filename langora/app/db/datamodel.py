@@ -7,6 +7,10 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Text, DateTime, Boolean, JSON
 from sqlalchemy import Table, Column, ForeignKey
 
+
+# ---------------------------------------------------------------------------
+# ORM
+# ---------------------------------------------------------------------------
 class Base(DeclarativeBase):
     pass
 

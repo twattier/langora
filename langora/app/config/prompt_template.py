@@ -25,3 +25,12 @@ summary_reduce = """
     Keep the format with each topic described precisely with a bullet point list.
     Order them by the importance.
     """
+
+#RAG
+rag = """
+    As {agent}
+    Based only on this context : 
+    {context}
+    Generate an answer for this query : {query}
+    If you don't know, says that the context is not enought to answer
+    """

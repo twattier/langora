@@ -5,6 +5,7 @@ from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.prompts.prompt import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.llm import LLMChain
+from langchain_core.documents import Document
 
 from config.env import Config
 from config import prompt_template as template
@@ -34,7 +35,7 @@ class ServiceModel():
 
     def get_topic_searches_recommended(self, topic_name:str):        
         prompt = PromptTemplate.from_template(template.searches_recommended)
-        knowledge = self.db.select_knowledge()        
+        knowledge = self.db.select_knowledge()
         result = self.submit_prompt(prompt.format(agent=knowledge.agent, topic=topic_name))
         try:
             list = json.loads(result)
@@ -42,6 +43,18 @@ class ServiceModel():
             print("LLM Error : incorrect generated JSON")
             return []
         return list
+    
+    def rag(self, query:str, docs:list[Document]):
+        prompt = PromptTemplate.from_template(template.rag)
+        knowledge = self.db.select_knowledge()
+        context = self.build_rag_context(docs)
+        return self.submit_prompt(prompt.format(agent=knowledge.agent, context=context, query=query))
+    
+    def build_rag_context(self, docs:list[Document])->str:
+        text = ""
+        for doc in docs:
+            text += "\n - " + doc.page_content
+        return text
 
     # ---------------------------------------------------------------------------
     # Summarize
