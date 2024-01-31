@@ -66,9 +66,20 @@ class DbVector():
     
     def __init__(self)->None:        
         self.engine = create_engine(CONNECTION_STRING, echo=False)
+        self.connection = self.engine.connect()            
         self.session = None
+        self.session = Session(bind=self.connection,
+                               expire_on_commit=False, 
+                               join_transaction_mode="create_savepoint"
+                            )
+        
         self.embeddings = None
         self.stores = None
+
+    def __del__(self)->None:
+        self.session.close()        
+        # self.session = None
+        self.connection.close()
 
     def init_embeddings(self):
         if self.embeddings:
@@ -90,14 +101,17 @@ class DbVector():
         
     def open_session(self)->None:
         if self.session:
-            return
-        self.session = Session(self.engine, expire_on_commit=False)
+            return        
+        self.session = Session(bind=self.connection,
+                               expire_on_commit=False, 
+                               join_transaction_mode="create_savepoint"
+                            )
 
     def close_session(self)->None:
         if not self.session:
             return
-        self.session.close()
-        self.session = None
+        # self.session.close()        
+        # self.session = None
     
     def add(self, obj:Base)->None:
         self.session.add(obj)

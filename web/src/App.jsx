@@ -16,7 +16,9 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Menu />
+      <Box sx={{ pl: 1 }}>
+        <Menu />
+      </Box>
       <Box component="main" flex={1}>
         <Router>
           <Routes>

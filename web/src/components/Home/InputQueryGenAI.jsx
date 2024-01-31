@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { styled } from '@mui/system'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import InputAdornment from '@mui/material/InputAdornment'
 import Button from '@mui/material/Button'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import SearchIcon from '@mui/icons-material/Search'
+import TextField from '@mui/material/TextField'
+
+import {InputQuery} from '../../utils/style/component'
 
 const ButtonGenAI = styled(Button)(({ theme }) => ({
   backgroundColor: theme.palette.secondary.main,
@@ -18,33 +18,26 @@ const ButtonGenAI = styled(Button)(({ theme }) => ({
   color: '#fff'
 }));
 
-export default function QueryInput(props) {
-  const { onQuerySearch, onQueryGenAI } = props
+export default function InputQueryGenAI(props) {
+  const { onQueryGenAI } = props
   const [value, setValue] = useState('')
 
   return (
-    <Stack direction="row" spacing={2}>
-      <TextField
+    <Stack direction="row" spacing={1}>
+      <InputQuery
         fullWidth
         multiline
         id="mainInput"
-        sx={{ pl: 1 }}
+        sx={{ pl: 1}}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(ev) => {
-          if (ev.key === 'Enter') {
-            onQuerySearch(value)
+          if (ev.key === 'Enter' && ev.ctrlKey) {
+            onQueryGenAI(value)
             ev.preventDefault()
           }
-        }}
-        InputProps={{
-          endAdornment: (
-            <InputAdornment>
-              <SearchIcon />
-            </InputAdornment>
-          ),
-        }}
+        }}        
       />
-      <ButtonGenAI
+      <ButtonGenAI sx={{height:55}}
         onClick={() => onQueryGenAI(value)}
       >
         <AutoAwesomeIcon />

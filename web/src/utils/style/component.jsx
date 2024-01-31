@@ -1,11 +1,32 @@
-import { useTheme } from '@mui/material/styles'
+import { styled } from '@mui/system'
 
 import Box from '@mui/material/Box'
-import styled from 'styled-components'
+import TextField from '@mui/material/TextField'
 
-export const ContentBox = styled(Box)`
-  background-color: #e8eaf6;
-  border: 1px solid;
-  border-color: #a9a9a9;
-  border-radius: 4px;
-`
+export const ContentBox = styled((props) => <Box {...props} />)(
+  ({ theme }) => ({
+    backgroundColor: theme.palette.content.main,
+    border: '1px solid',
+    borderColor: theme.palette.content.dark,
+    borderRadius: '4px',
+  })
+)
+
+export const InputQuery = styled((props) => <TextField {...props} />)(
+  ({ theme }) => ({
+    '& .MuiFilledInput-root': {
+      backgroundColor: 'white',
+    },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': {
+        borderColor: theme.palette.content.dark,
+      },
+      '&:hover fieldset': {
+        borderColor: theme.palette.primary.light,
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: theme.palette.primary.main,
+      },
+    },
+  })
+)

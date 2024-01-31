@@ -11,7 +11,7 @@ summary_map = """
     As <agent>
     Use the following set of documents :
         {docs}
-    Based on this list of docs, provide a detailed summary of the content.
+    Based on this list of documents, provide a detailed summary of the content.
     Each topic is described precisely with a bullet point list.
     Order them by the importance.
     """
@@ -29,8 +29,8 @@ summary_reduce = """
 #RAG
 rag = """
     As {agent}
-    Based only on this context : 
+    Use the following set of documents : 
     {context}
-    Generate an answer for this query : {query}
-    If you don't know, says that the context is not enought to answer
+    Based only on this list of documents, generate a full detailed and accurate answer for this query : 
+    {query}    
     """
