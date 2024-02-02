@@ -32,6 +32,24 @@ class Langora():
         finally:
             self.db.close_session()
 
+    def update_db_knowledge(self, up_to_store:STORE=STORE.SOURCE):
+        try:            
+            self.init_store_model()
+            self.db.open_session()    
+            #Sources without summary
+            self.loader.update_summarize_sources()            
+            #Sources without extract or summary
+            self.loader.update_extract_sources(up_to_store=up_to_store)
+            #Empty topics
+            topics = self.db.select_topics()
+            empties = filter(lambda t: len(t.searches)==0, topics)
+            self.loader.update_topics(empties, up_to_store=up_to_store)
+        finally:
+            self.db.close_session()
+
+    # ---------------------------------------------------------------------------
+    # Task
+
     def add_searches(self, topic_ids:list[int], up_to_store_id:int):
         try:            
             self.init_store_model()
@@ -65,14 +83,13 @@ class Langora():
         finally:
             self.db.close_session()
             
-    def summarize_source(self, source_id:int, up_to_store_id:int):
+    def summarize_source(self, source_id:int):
         try:            
             self.init_store_model()
             self.db.open_session()   
 
             source = self.db.select_source_by_id(source_id)
-            up_to_store = STORE(up_to_store_id)            
-            self.loader.summarize_sources([source], up_to_store=up_to_store)
+            self.loader.summarize_sources([source])
         finally:
             self.db.close_session()
     

@@ -7,6 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from sqlalchemy import create_engine, select, text, func, and_
+from sqlalchemy import Table, Column
 from sqlalchemy.orm import Session
 
 from config.env import Config
@@ -131,8 +132,19 @@ class DbVector():
     # Topic
     
     def select_topics_by_ids(self, ids:list[int])->list[Topic]:
+        if len(ids)==0:
+            return []
         stmt = select(Topic).where(Topic.id.in_(ids))
         return self.select_many(stmt)
+    
+    def select_topics(self)->list[Topic]:
+        stmt = select(Topic)
+                # , func.count(Table("search_topic", Column('search_id'))).label('total')) \
+                # .join(Topic.searches) \
+                # .group_by(Topic).order_by(text('total DESC')).limit(max)
+        topics = self.select_many(stmt)       
+        topics.sort(key=lambda t: len(t.searches), reverse=True)     
+        return topics
 
     # ---------------------------------------------------------------------------
     # Search 
@@ -142,6 +154,8 @@ class DbVector():
         return self.select_one(stmt)
     
     def select_searches_by_ids(self, ids:list[int])->list[Topic]:
+        if len(ids)==0:
+            return []
         stmt = select(Search).where(Search.id.in_(ids))
         return self.select_many(stmt)
         

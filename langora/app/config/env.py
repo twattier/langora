@@ -16,12 +16,12 @@ class AppConfig:
     DEBUG:bool = False
 
     USE_OPENAI:bool = True
-    USE_APIFY:bool = True
+    USE_APIFY:bool = False
 
     OPENAI_API_KEY:str = ""
 
-    GOOGLE_API_KEY=''
-    GOOGLE_CSE_ID=''
+    GOOGLE_API_KEY:str=''
+    GOOGLE_CSE_ID:str=''
 
     APIFY_API_TOKEN:str = ""
 

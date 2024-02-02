@@ -24,10 +24,12 @@ class ServiceLoader(QueueTask):
 
     def init_loader(self):
         loader = None
-        if Config.USE_APIFY:            
+        if Config.USE_APIFY:           
+            print('Loader Apify') 
             from loader.loader_apify import LoaderApify
             loader = LoaderApify()
         else:
+            print('Loader LoaderHtml2Text') 
             from loader.loader_html2text import LoaderHtml2Text
             loader = LoaderHtml2Text()
         self.loader=loader
@@ -79,7 +81,7 @@ class ServiceLoader(QueueTask):
                                    "task.task_loader.extract_source", input, to_store.value)
         elif from_store == STORE.SRC_EXTRACT and to_store.value>=STORE.SRC_SUMMARY.value:
             self.tasks.launch_task(STORE.SRC_SUMMARY.name,
-                                   "task.task_loader.summarize_source", input, to_store.value)
+                                   "task.task_loader.summarize_source", input)
 
     # ---------------------------------------------------------------------------
     # knowledge
@@ -109,18 +111,23 @@ class ServiceLoader(QueueTask):
             topic = Topic(name=name)
             self.db.add(topic)            
             new_topics.append(topic)            
-        self.db.save()
+        
+        if len(new_topics)==0:
+            return []
+        self.db.save()        
 
         print('Embeddings topics')
         for topic in new_topics:
             self.db.store_topic_embeddings(topic) #TODO manage list
 
-        if self.is_task_mode:
-            self.chain_task(list_obj_attribute(new_topics, 'id'), STORE.TOPIC, up_to_store)
-        elif up_to_store:
-            self.chain_loader(new_topics, STORE.TOPIC, up_to_store)
-
+        self.update_topics(new_topics)
         return new_topics
+    
+    def update_topics(self, topics:list[Topic], up_to_store:STORE)->list[Topic]:
+        if self.is_task_mode:
+            self.chain_task(list_obj_attribute(topics, 'id'), STORE.TOPIC, up_to_store)
+        elif up_to_store:
+            self.chain_loader(topics, STORE.TOPIC, up_to_store)
 
     # ---------------------------------------------------------------------------
     # Search
@@ -136,6 +143,8 @@ class ServiceLoader(QueueTask):
                 recos = self.add_searches(queries, topic)
                 searches.extend(recos)                
                 bar()                
+        if len(searches)==0:
+            return []
 
         if self.is_task_mode:
             self.chain_task([list_obj_attribute(searches, 'id')], STORE.SEARCH, up_to_store)
@@ -161,7 +170,8 @@ class ServiceLoader(QueueTask):
             if topic and topic not in search.topics:
                 search.topics.append(topic)
                 #TODO complete with identified topics (handle similarity topic)
-
+        if len(new_searches)==0:
+            return []
         self.db.save()        
 
         print('Embeddings searches')
@@ -289,14 +299,13 @@ class ServiceLoader(QueueTask):
         else:
             self.chain_loader(sources, STORE.SOURCE, up_to_store)
 
-    def update_summarize_sources(self
-                       , up_to_store:STORE=STORE.SRC_SUMMARY)->list[Source]:        
+    def update_summarize_sources(self)->list[Source]:        
         sources = self.db.select_not_summarized_sources()
         if self.is_task_mode:
             for source in sources:
-                self.chain_task(source.id, STORE.SRC_EXTRACT, up_to_store)
+                self.chain_task(source.id, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY)
         else:
-            self.chain_loader(sources, STORE.SRC_EXTRACT, up_to_store)
+            self.chain_loader(sources, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY)
 
 
     # ---------------------------------------------------------------------------
@@ -319,9 +328,11 @@ class ServiceLoader(QueueTask):
         elif func == "add_sources":
             pass
         elif func == "extract_source":
-            desc['name'] = "Extract Source"
-            desc['id'] = obj
-            desc['item'] = self.db.select_source_by_id(int(obj)).title
+            task.name = "Extract Source"
+            task.item_id = obj
+            task.item_label = self.db.select_source_by_id(int(obj)).title
         elif func == "summarize_source":
-            pass
+            task.name = "Summarize Source"
+            task.item_id = obj
+            task.item_label = self.db.select_source_by_id(int(obj)).title
         task.description = desc

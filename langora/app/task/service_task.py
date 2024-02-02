@@ -15,7 +15,10 @@ class Task():
         self.enqueued_at = utc_to_tz(job.enqueued_at)
         self.start_at = utc_to_tz(job.started_at)
         self.ended_at = utc_to_tz(job.ended_at)
-        self.description = None
+        
+        self.name = None
+        self.item_id = None
+        self.item_label = None
 
 SEARCH_STATUS = ["all", "pending", "queued", "started", "finished", "failed"]
 

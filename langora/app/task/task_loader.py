@@ -11,6 +11,6 @@ def add_sources(search_ids:list[int], up_to_store_id:int):
 def extract_source(source_id:int, up_to_store_id:int):
     app.extract_source(source_id, up_to_store_id)
         
-def summarize_source(source_id:int, up_to_store_id:int):
-    app.summarize_source(source_id, up_to_store_id)
+def summarize_source(source_id:int):
+    app.summarize_source(source_id)
         

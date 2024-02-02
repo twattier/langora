@@ -5,7 +5,7 @@ import Divider from '@mui/material/Divider'
 
 import { ContentBox } from '../../utils/style/component'
 import ListItemDocument from '../../components/Home/ListItemDocument'
-import SimilaritiesResults from '../../components/SimilaritiesResults'
+import SimilaritiesResults from './SimilaritiesResults'
 import { DisplayLines } from '../../utils/display'
 
 export default function GenAIResult(props) {

@@ -7,7 +7,7 @@ from marshmallow import Schema, fields
 
 
 from config.env import Config
-from db.datamodel import Knowledge, Search, Source
+from db.datamodel import Knowledge, Topic, Search, Source
 from task.service_task import SEARCH_STATUS
 from langora import Langora
 from db.dbvector import STORE
@@ -46,6 +46,15 @@ class SearchShortSchema(ma.SQLAlchemySchema):
 search_short_schema = SearchShortSchema()
 searches_short_schema = SearchShortSchema(many=True)
 
+class TopicSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Topic
+    id = ma.auto_field()
+    name = ma.auto_field()
+    searches =  Nested(SearchShortSchema, many=True)
+topic_schema = TopicSchema()
+topics_schema = TopicSchema(many=True)
+
 class SourceShortSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Source
@@ -65,8 +74,10 @@ class TaskSchema(Schema):
     result = fields.Str()
     enqueued_at = fields.DateTime()
     start_at = fields.DateTime()
-    ended_at = fields.DateTime()
-    description = fields.Dict()
+    ended_at = fields.DateTime()    
+    name = fields.Str()
+    item_id = fields.Str()
+    item_label = fields.Str()
 task_schema = TaskSchema()
 tasks_schema = TaskSchema(many=True)
 
@@ -108,6 +119,18 @@ class Knowledge(Resource):
             return knowledge_schema.dump(data)
         finally:
             app.db.close_session()    
+
+@api.route('/topics', methods=['GET'])
+class Topics(Resource):
+    @api.doc('Get topics')
+    def get(self):
+        global app        
+        try:
+            app.db.open_session()
+            data = app.db.select_topics()            
+            return topics_schema.dump(data)
+        finally:
+            app.db.close_session()
 
 @api.route('/searches', methods=['GET'])
 class Searches(Resource):
@@ -192,6 +215,13 @@ class StatusTasks(Resource):
         finally:
             app.db.close_session()
     
+@ns_task.route('/knowledge/update', methods=['GET'])
+class UpdateKnowledge(Resource):
+    @api.doc('Launch Task to fill empty source extraction')
+    def get(self):
+        global app        
+        app.update_db_knowledge(STORE.SRC_SUMMARY)   
+
 @ns_task.route('/sources/extract', methods=['GET'])
 class SourceExtract(Resource):
     @api.doc('Launch Task to fill empty source extraction')

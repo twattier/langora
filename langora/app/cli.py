@@ -41,16 +41,23 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
     # ---------------------------------------------------------------------------
-    # Install    
-    # ---------------------------------------------------------------------------
+    # Install 
     parser_install = subparsers.add_parser('install', help='Initilize Langora knowledge base')
     parser_install.add_argument('-a', '--agent', help="Agent profile description", required=True)
     parser_install.add_argument('-t', '--topics', help="List of topics", nargs='+', required=True)
     #Option 
     parser_install.add_argument('-l', '--load', help="Import level search[DEFAULT]->source->extract->summary",
-                                choices=['search', 'source', 'extract', 'summary'])    
+                                choices=['search', 'source', 'extract', 'summary'], default='search')    
+    
+    # ---------------------------------------------------------------------------
+    # Update
+    parser_fill = subparsers.add_parser('update', help='Update knowledge base')
+    parser_fill.add_argument('-l', '--load', help="Import level search[DEFAULT]->source->extract->summary",
+                             choices=['search', 'source', 'extract', 'summary'], default='search')    
+    parser_fill.add_argument('-t', '--task', help="Use task mode", action="store_true")    
 
     args = parser.parse_args()
+
     # ---------------------------------------------------------------------------
     # Install  
     # ---------------------------------------------------------------------------
@@ -58,10 +65,24 @@ if __name__ == '__main__':
         if not query_yes_no('Are you sure ? It will erase all the database', default='no'):
             sys.exit()
         up_to_store = STORE.SEARCH
-        if args.load.tolower() == 'source': up_to_store = STORE.SOURCE
-        elif args.load.tolower() == 'extract': up_to_store = STORE.SRC_EXTRACT
-        elif args.load.tolower() == 'summary': up_to_store = STORE.SRC_SUMMARY
+        if args.load.lower() == 'source': up_to_store = STORE.SOURCE
+        elif args.load.lower() == 'extract': up_to_store = STORE.SRC_EXTRACT
+        elif args.load.lower() == 'summary': up_to_store = STORE.SRC_SUMMARY
         
         app = Langora()        
         app.install_db_knowledge(args.agent, args.topics, 
                                  up_to_store=up_to_store)
+        
+    # ---------------------------------------------------------------------------
+    # Update
+    # ---------------------------------------------------------------------------
+    elif args.command == 'update':
+
+        up_to_store = STORE.SEARCH
+        if args.load.lower() == 'source': up_to_store = STORE.SOURCE
+        elif args.load.lower() == 'extract': up_to_store = STORE.SRC_EXTRACT
+        elif args.load.lower() == 'summary': up_to_store = STORE.SRC_SUMMARY
+
+        app = Langora(is_task_mode=args.task)
+        app.update_db_knowledge(up_to_store=up_to_store)
+

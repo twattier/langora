@@ -4,8 +4,8 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 
-import ListItemSearch from './atoms/ListItemSearch'
-import ListItemSource from './atoms/ListItemSource'
+import ListItemSearch from '../atoms/ListItemSearch'
+import ListItemSource from '../atoms/ListItemSource'
 
 export default function QueryResults(props) {
   const { similarities } = props

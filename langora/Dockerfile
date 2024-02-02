@@ -12,6 +12,7 @@ RUN pip3 install -r requirements.txt
 
 #playwright (chromium install)
 RUN playwright install
+RUN playwright install-deps
 
 #supervisor
 RUN apt-get update && apt-get install -y supervisor
