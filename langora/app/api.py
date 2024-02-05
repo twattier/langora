@@ -43,6 +43,7 @@ class SearchShortSchema(ma.SQLAlchemySchema):
         model = Search
     id = ma.auto_field()
     query = ma.auto_field()
+    nb_sources = fields.Function(lambda obj: obj.nb_sources())
 search_short_schema = SearchShortSchema()
 searches_short_schema = SearchShortSchema(many=True)
 
@@ -120,7 +121,20 @@ class Knowledge(Resource):
         finally:
             app.db.close_session()    
 
-@api.route('/topics', methods=['GET'])
+@api.route('/knowledge/stats', methods=['GET'])
+class Stats(Resource):
+    @api.doc('Get Knowledge base statistics')
+    def get(self):
+        global app        
+        try:
+            app.db.open_session()            
+            return app.stats()
+        finally:
+            app.db.close_session()    
+
+parser_topics = reqparse.RequestParser()
+parser_topics.add_argument('topics', action='split')
+@api.route('/topics', methods=['GET', 'POST'])
 class Topics(Resource):
     @api.doc('Get topics')
     def get(self):
@@ -131,6 +145,13 @@ class Topics(Resource):
             return topics_schema.dump(data)
         finally:
             app.db.close_session()
+
+    @api.doc('Add topics')
+    def post(self):
+        global app   
+        args = parser_topics.parse_args()
+        app.add_topics(args['topics'], up_to_store_id=STORE.SRC_SUMMARY.value)
+
 
 @api.route('/searches', methods=['GET'])
 class Searches(Resource):
@@ -197,6 +218,13 @@ class genAI(Resource):
         finally:
             app.db.close_session()   
 
+@api.route('/topics/suggest', methods=['GET'])
+class SuggestTopics(Resource):
+    @api.doc('Suggest Topics')
+    def get(self):
+        global app
+        return app.model.suggest_topics()
+
 # ---------------------------------------------------------------------------
 # Task
 @ns_task.route('/status/<status_type>', methods=['GET'])
@@ -216,11 +244,13 @@ class StatusTasks(Resource):
             app.db.close_session()
     
 @ns_task.route('/knowledge/update', methods=['GET'])
+@ns_task.param('summarize', 'Update up to summarization (0/1)')
 class UpdateKnowledge(Resource):
     @api.doc('Launch Task to fill empty source extraction')
-    def get(self):
+    def get(self, summarize='0'):
         global app        
-        app.update_db_knowledge(STORE.SRC_SUMMARY)   
+        up_to_store = STORE.SRC_SUMMARY if summarize == '1' else STORE.SRC_EXTRACT
+        app.update_db_knowledge(up_to_store)   
 
 @ns_task.route('/sources/extract', methods=['GET'])
 class SourceExtract(Resource):

@@ -7,7 +7,7 @@ from db.datamodel import Knowledge, Topic, Search, Source, SearchSource
 from llm.service_model import ServiceModel
 from loader.google_search import google_search
 from task.service_task import ServiceTask, QueueTask, Task
-from utils.functions import get_url_hostname, list_obj_attribute
+from utils.functions import get_url_hostname, list_obj_attribute, split_list, list_to_string
 
 LOADERS = [STORE.TOPIC, STORE.SEARCH, STORE.SOURCE, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY]
 
@@ -105,8 +105,11 @@ class ServiceLoader(QueueTask):
     def add_topics(self, names:list[str], up_to_store:STORE)->list[Topic]:        
         print('Add topics :')
         new_topics = []
-        for name in names:
-            #TODO check duplicate similarity
+        for name in names:            
+            name = name.strip()
+            if self.db.select_topic_by_name(name):
+                print(f'- Skip : {name}')
+                continue            
             print(f'- Add : {name}')
             topic = Topic(name=name)
             self.db.add(topic)            
@@ -116,9 +119,9 @@ class ServiceLoader(QueueTask):
             return []
         self.db.save()        
 
-        print('Embeddings topics')
-        for topic in new_topics:
-            self.db.store_topic_embeddings(topic) #TODO manage list
+        # print('Embeddings topics')
+        # for topic in new_topics:
+        #     self.db.store_topic_embeddings(topic) #TODO manage list
 
         self.update_topics(new_topics)
         return new_topics
@@ -145,12 +148,7 @@ class ServiceLoader(QueueTask):
                 bar()                
         if len(searches)==0:
             return []
-
-        if self.is_task_mode:
-            self.chain_task([list_obj_attribute(searches, 'id')], STORE.SEARCH, up_to_store)
-        elif up_to_store:
-            self.chain_loader(searches, STORE.SEARCH, up_to_store)
-
+        self.update_searches(searches, up_to_store=up_to_store)
         return searches
 
     def add_searches(self, queries:list[str], topic:Topic=None
@@ -178,12 +176,15 @@ class ServiceLoader(QueueTask):
         for search in new_searches:
             self.db.store_search_embeddings(search) #TODO manage list
 
-        if self.is_task_mode:
-            self.chain_task(list_obj_attribute(new_searches, 'id'), STORE.SEARCH, up_to_store)
-        elif up_to_store:
-            self.chain_loader(new_searches, STORE.SEARCH, up_to_store)
-        
+        self.update_searches(new_searches, up_to_store=up_to_store)
         return new_searches
+    
+    def update_searches(self, searches:list[Search], up_to_store:STORE=None):
+        if self.is_task_mode:
+            for split in split_list(searches, 10):
+                self.chain_task(list_obj_attribute(split, 'id'), STORE.SEARCH, up_to_store)
+        elif up_to_store:
+            self.chain_loader(searches, STORE.SEARCH, up_to_store)
 
     # ---------------------------------------------------------------------------
     # Source
@@ -216,6 +217,7 @@ class ServiceLoader(QueueTask):
                         print(f'- Add : {source.get_name()}')
                         new_sources.append(source)
                         if self.is_task_mode:
+                            self.db.add(source)
                             self.db.save()
                             self.chain_task(source.id, STORE.SOURCE, up_to_store)
 
@@ -278,21 +280,23 @@ class ServiceLoader(QueueTask):
                     bar()
                     continue
                 print(f'- Summary : {source.get_name()}')
-                try:
-                    doc = source.document_extract()
-                    source.summary = self.model.summarize(doc)
-                    source.date_summary = datetime.now()      
-                    update_sources.append(source)              
-                    self.db.save()
-                    self.db.store_source_embeddings(source, STORE.SRC_SUMMARY)
-                except Exception as error:
-                    print("An error occurred:", error)
+                # try:
+                doc = source.document_extract()
+                source.summary = self.model.summarize(doc)
+                source.date_summary = datetime.now()      
+                update_sources.append(source)              
+                self.db.save()
+                self.db.store_source_embeddings(source, STORE.SRC_SUMMARY)
+                # except Exception as error:
+                #     print("An error occurred:", error)
                 bar()
         return update_sources
     
     def update_extract_sources(self
                        , up_to_store:STORE=STORE.SRC_EXTRACT)->list[Source]:        
         sources = self.db.select_not_extracted_sources()
+        if len(sources)==0: 
+            return
         if self.is_task_mode:
             for source in sources:
                 self.chain_task(source.id, STORE.SOURCE, up_to_store)
@@ -301,6 +305,8 @@ class ServiceLoader(QueueTask):
 
     def update_summarize_sources(self)->list[Source]:        
         sources = self.db.select_not_summarized_sources()
+        if len(sources)==0: 
+            return
         if self.is_task_mode:
             for source in sources:
                 self.chain_task(source.id, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY)
@@ -319,14 +325,15 @@ class ServiceLoader(QueueTask):
             self.task_description(task)
         return tasks
     
-    def task_description(self, task:Task)->dict:
-        desc = {}        
+    def task_description(self, task:Task)->dict:        
         func, params = self.parse_cmd(task.cmd)
         obj = params[0]
         if func == "add_searches":
-            pass
+            task.name = "Recommended Searches"            
+            task.item_label =  f"{len(obj)} Topic(s)"
         elif func == "add_sources":
-            pass
+            task.name = "Seek Sources"
+            task.item_label =  f"{len(obj)} Search(es)"
         elif func == "extract_source":
             task.name = "Extract Source"
             task.item_id = obj
@@ -335,4 +342,3 @@ class ServiceLoader(QueueTask):
             task.name = "Summarize Source"
             task.item_id = obj
             task.item_label = self.db.select_source_by_id(int(obj)).title
-        task.description = desc

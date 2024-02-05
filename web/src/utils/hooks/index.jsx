@@ -54,6 +54,32 @@ export function useFetchKnowledge() {
   return { knowledge, isLoadingknowledge, errorLoadingknowledge }
 }
 
+export function useFetchTopics() {
+  const url = `${baseURL}/topics`
+  const [topics, setTopics] = useState({})
+  const [isLoadingTopics, setLoadingTopics] = useState(true)
+  const [errorLoadingTopics, setErrorLoadingTopics] = useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    setLoadingTopics(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setTopics(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingTopics(true)
+      } finally {
+        setLoadingTopics(false)
+      }
+    }
+    fetchData()
+  }, [url])
+  return { topics, isLoadingTopics, errorLoadingTopics }
+}
+
 export function useFetchTopSources() {
   const url = `${baseURL}/sources`
   const [topSources, setTopSources] = useState({})
@@ -81,109 +107,114 @@ export function useFetchTopSources() {
 }
 
 export function useFetchTopSearches() {
-    const url = `${baseURL}/searches`
-    const [topSearches, setTopSearches] = useState({})
-    const [isLoadingTopSearches, setLoadingTopSearches] = useState(true)
-    const [errorLoadingTopSearches, setErrorLoadingTopSearches] = useState(false)
-  
-    useEffect(() => {
-      if (!url) return
-      setLoadingTopSearches(true)
-      async function fetchData() {
-        try {
-          const response = await fetch(url)
-          const data = await response.json()
-          setTopSearches(data)
-        } catch (err) {
-          console.log(err)
-          setErrorLoadingTopSearches(true)
-        } finally {
-          setLoadingTopSearches(false)
-        }
+  const url = `${baseURL}/searches`
+  const [topSearches, setTopSearches] = useState({})
+  const [isLoadingTopSearches, setLoadingTopSearches] = useState(true)
+  const [errorLoadingTopSearches, setErrorLoadingTopSearches] = useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    setLoadingTopSearches(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setTopSearches(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingTopSearches(true)
+      } finally {
+        setLoadingTopSearches(false)
       }
-      fetchData()
-    }, [url])
-    return { topSearches, isLoadingTopSearches, errorLoadingTopSearches }
-  }
+    }
+    fetchData()
+  }, [url])
+  return { topSearches, isLoadingTopSearches, errorLoadingTopSearches }
+}
 
-  export function useFetchSimilarities(query) {
-    const url = `${baseURL}/similarities?query=${query}`
-    const [similarities, setSimilarities] = useState({})
-    const [isLoadingSimilarities, setLoadingSimilarities] = useState(true)
-    const [errorLoadingSimilarities, setErrorLoadingSimilarities] = useState(false)
-  
-    useEffect(() => {
-      if (!url) return      
-      if(query===undefined || query==='') return      
-      setLoadingSimilarities(true)
-      async function fetchData() {        
-        try {
-          const response = await fetch(url)
-          const data = await response.json()
-          setSimilarities(data)
-        } catch (err) {
-          console.log(err)          
-          setErrorLoadingSimilarities(true)
-        } finally {
-          setLoadingSimilarities(false)
-        }
+export function useFetchSimilarities(query) {
+  const url = `${baseURL}/similarities?query=${query}`
+  const [similarities, setSimilarities] = useState({})
+  const [isLoadingSimilarities, setLoadingSimilarities] = useState(true)
+  const [errorLoadingSimilarities, setErrorLoadingSimilarities] =
+    useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    if (query === undefined || query === '') return
+    setLoadingSimilarities(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setSimilarities(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingSimilarities(true)
+      } finally {
+        setLoadingSimilarities(false)
       }
-      fetchData()
-    }, [url, query])
-    return { similarities, isLoadingSimilarities, errorLoadingSimilarities }
-  }
+    }
+    fetchData()
+  }, [url, query])
+  return { similarities, isLoadingSimilarities, errorLoadingSimilarities }
+}
 
-  export function useFetchGenAI(query) {
-    const url = `${baseURL}/genai?query=${query}`
-    const [resultGenAI, setResultGenAI] = useState({})
-    const [isLoadingResultGenAI, setLoadingResultGenAI] = useState(true)
-    const [errorLoadingResultGenAI, setErrorLoadingResultGenAI] = useState(false)
-  
-    useEffect(() => {
-      if (!url) return
-      if(query===undefined || query==='') return
-      setLoadingResultGenAI(true)
-      async function fetchData() {
-        try {
-          const response = await fetch(url)
-          const data = await response.json()
-          setResultGenAI(data)
-        } catch (err) {
-          console.log(err)          
-          setErrorLoadingResultGenAI(true)
-        } finally {
-          setLoadingResultGenAI(false)
-        }
+export function useFetchGenAI(query) {
+  const url = `${baseURL}/genai?query=${query}`
+  const [resultGenAI, setResultGenAI] = useState({})
+  const [isLoadingResultGenAI, setLoadingResultGenAI] = useState(true)
+  const [errorLoadingResultGenAI, setErrorLoadingResultGenAI] = useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    if (query === undefined || query === '') return
+    setLoadingResultGenAI(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setResultGenAI(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingResultGenAI(true)
+      } finally {
+        setLoadingResultGenAI(false)
       }
-      fetchData()
-    }, [url, query])
-    return { resultGenAI, isLoadingResultGenAI, errorLoadingResultGenAI }
-  }
+    }
+    fetchData()
+  }, [url, query])
+  return { resultGenAI, isLoadingResultGenAI, errorLoadingResultGenAI }
+}
 
-  export function useFetchTasks() {
-    const url = `${baseURL}/tasks/status/pending`
-    const [tasks, setTasks] = useState({})
-    const [isLoadingTasks, setLoadingTasks] = useState(true)
-    const [errorLoadingTasks, setErrorLoadingTasks] = useState(false)
-  
-    useEffect(() => {
-      if (!url) return
-      setLoadingTasks(true)
-      async function fetchData() {
-        try {
-          const response = await fetch(url)
-          const data = await response.json()
-          setTasks(data)
-        } catch (err) {
-          console.log(err)          
-          setErrorLoadingTasks(true)
-        } finally {
-          setLoadingTasks(false)
-        }
+export function useFetchTasks(autoRefresh) {
+  const url = `${baseURL}/tasks/status/pending`
+  const [tasks, setTasks] = useState({})
+  const [isLoadingTasks, setLoadingTasks] = useState(true)
+  const [errorLoadingTasks, setErrorLoadingTasks] = useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    setLoadingTasks(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setTasks(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingTasks(true)
+      } finally {
+        setLoadingTasks(false)
       }
-      fetchData()
-    }, [url])
-    return { tasks, isLoadingTasks, errorLoadingTasks }
-  }
-
-
+    }
+    fetchData()
+    if (autoRefresh) {
+      const intervalId = setInterval(() => {
+        fetchData() // Fetch data every 5 seconds
+      }, 5000)
+      return () => clearInterval(intervalId);
+    }
+  }, [url, autoRefresh])
+  return { tasks, isLoadingTasks, errorLoadingTasks }
+}

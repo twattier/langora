@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from config.env import Config
 from config import prompt_template as template
 from db.dbvector import DbVector
+from utils.functions import list_to_string, list_obj_attribute
 
 class ServiceModel():
 
@@ -55,6 +56,21 @@ class ServiceModel():
         for doc in docs:
             text += "\n - " + doc.page_content
         return text
+    
+    def suggest_topics(self, nb=10):
+        topics = self.db.select_topics()
+        prompt = PromptTemplate.from_template(template.topics_suggested)
+        knowledge = self.db.select_knowledge()
+        names = list_to_string(list_obj_attribute(topics, 'name'))
+        result = self.submit_prompt(prompt.format(agent=knowledge.agent, topics=names))
+        try:
+            list = json.loads(result)
+        except:
+            print("LLM Error : incorrect generated JSON")
+            return []
+        if len(list)>nb:
+            list = list[:nb]
+        return list
 
     # ---------------------------------------------------------------------------
     # Summarize

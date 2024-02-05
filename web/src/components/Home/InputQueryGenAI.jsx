@@ -3,20 +3,8 @@ import { styled } from '@mui/system'
 import Stack from '@mui/material/Stack'
 import Button from '@mui/material/Button'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import TextField from '@mui/material/TextField'
 
-import {InputQuery} from '../../utils/style/component'
-
-const ButtonGenAI = styled(Button)(({ theme }) => ({
-  backgroundColor: theme.palette.secondary.main,
-  '&:hover': {
-    backgroundColor: theme.palette.secondary.light,
-  },
-  border: 1,
-  borderColor: theme.palette.secondary.dark,
-  borderRadius: 8,
-  color: '#fff'
-}));
+import {InputText, ButtonGenAI} from '../../utils/style/component'
 
 export default function InputQueryGenAI(props) {
   const { onQueryGenAI } = props
@@ -24,7 +12,7 @@ export default function InputQueryGenAI(props) {
 
   return (
     <Stack direction="row" spacing={1}>
-      <InputQuery
+      <InputText
         fullWidth
         multiline
         id="mainInput"

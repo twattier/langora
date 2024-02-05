@@ -6,6 +6,14 @@ searches_recommended = """
     Give only the questions, avoid any duplicate, format it as a JSON list.
     """
 
+#Generate query for google search
+topics_suggested = """
+    As {agent}
+    Provide additional common presented topics related to this list of topics : {topics}
+    Give only new topics short names, avoid any duplicate. Do not include the list of related topics.
+    Format it as a JSON list.
+    """
+
 #Summary a piece of text
 summary_map = """
     As <agent>

@@ -48,6 +48,9 @@ class Search(Base):
 
     search_sources: Mapped[List["SearchSource"]] = relationship(back_populates="search", order_by='SearchSource.rank')
 
+    def nb_sources(self):
+        return len(self.search_sources)
+
     def contains_source(self, source_id:int)->bool:
         for ss in self.search_sources:
             if ss.source.id == source_id:

@@ -11,4 +11,4 @@ class LoaderHtml2Text(LoaderWeb):
 
         html2text = Html2TextTransformer()
         docs_transformed = html2text.transform_documents(html)
-        return docs_transformed
+        return docs_transformed[0]

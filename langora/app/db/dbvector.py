@@ -131,6 +131,10 @@ class DbVector():
     # ---------------------------------------------------------------------------
     # Topic
     
+    def select_topic_by_name(self, name:str)->Topic:        
+        stmt = select(Topic).where(Topic.name == name)
+        return self.select_one(stmt)
+
     def select_topics_by_ids(self, ids:list[int])->list[Topic]:
         if len(ids)==0:
             return []
@@ -153,11 +157,16 @@ class DbVector():
         stmt = select(Search).where(Search.id==id)
         return self.select_one(stmt)
     
-    def select_searches_by_ids(self, ids:list[int])->list[Topic]:
+    def select_searches_by_ids(self, ids:list[int])->list[Search]:
         if len(ids)==0:
             return []
-        stmt = select(Search).where(Search.id.in_(ids))
-        return self.select_many(stmt)
+        #TODO fix in_
+        # stmt = select(Search).where(Search.id.in_(ids))
+        # return self.select_many(stmt)
+        list = []
+        for id in ids:
+            list.append(self.select_search_by_id(id))
+        return list
         
     def select_search_by_query(self, query)->Search:
         stmt = select(Search).where(func.lower(Search.query)==func.lower(query))
@@ -167,7 +176,7 @@ class DbVector():
         stmt = select(Search)
         return self.select_many(stmt)
     
-    def select_top_searches(self, max=5)->list[Source]:
+    def select_top_searches(self, max=5)->list[Search]:
         stmt = select(Search, func.count(SearchSource.source_id).label('total')) \
                 .join(Source.search_sources).group_by(Search).order_by(text('total DESC')).limit(max)
         return self.select_many(stmt)    

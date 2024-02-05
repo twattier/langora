@@ -3,7 +3,7 @@ from rq import Queue, get_current_job
 from rq.job import Job
 
 from config.env import Config
-from utils.functions import args_to_string, utc_to_tz, string_to_list
+from utils.functions import args_to_string, utc_to_tz, string_to_args
 
 class Task():
     def __init__(self, job:Job) -> None:
@@ -45,7 +45,7 @@ class ServiceTask():
         list = []
         for queue_name in self.queue_tasks.keys():
             list.extend(self.list_queue_tasks_status(queue_name, status))
-        list.sort(key=lambda t: t.enqueued_at)        
+        list.sort(key=lambda t: (t.status, t.enqueued_at), reverse = True)
         return list
 
     def list_queue_tasks_status(self, queue_name, status:str)->list[Task]:
@@ -86,14 +86,7 @@ class QueueTask(ABC):
         idxp = cmd.find('(')        
         func = cmd[idxf+1:idxp]
         params = cmd[idxp+1:-1]        
-        return func, string_to_list(params)
-
-        desc = Task.MAP_DESC.get(func)
-        if not desc:
-            return TaskDescription(cmd)
-        if desc.is_import:
-            desc.import_volume = params.replace("'", "")
-        return desc
+        return func, string_to_args(params)
 
     # def send_progress(self, msg:str, pct:float,
     #                    prt=False, msg_type:str=None):
