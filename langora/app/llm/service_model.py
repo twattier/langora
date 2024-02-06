@@ -9,13 +9,12 @@ from langchain_core.documents import Document
 
 from config.env import Config
 from config import prompt_template as template
-from db.dbvector import DbVector
+from db.service_db import SessionDB
 from utils.functions import list_to_string, list_obj_attribute
 
 class ServiceModel():
 
-    def __init__(self, db:DbVector) -> None:        
-        self.db = db
+    def __init__(self) -> None:        
         self.model = None
 
     def init_model(self):
@@ -34,9 +33,9 @@ class ServiceModel():
     def submit_prompt(self, prompt:str):
         return self.model.llm(prompt)
 
-    def get_topic_searches_recommended(self, topic_name:str):        
+    def get_topic_searches_recommended(self, sdb:SessionDB, topic_name:str):        
         prompt = PromptTemplate.from_template(template.searches_recommended)
-        knowledge = self.db.select_knowledge()
+        knowledge = sdb.select_knowledge()
         result = self.submit_prompt(prompt.format(agent=knowledge.agent, topic=topic_name))
         try:
             list = json.loads(result)
@@ -45,9 +44,9 @@ class ServiceModel():
             return []
         return list
     
-    def rag(self, query:str, docs:list[Document]):
+    def rag(self, sdb:SessionDB, query:str, docs:list[Document]):
         prompt = PromptTemplate.from_template(template.rag)
-        knowledge = self.db.select_knowledge()
+        knowledge = sdb.select_knowledge()
         context = self.build_rag_context(docs)
         return self.submit_prompt(prompt.format(agent=knowledge.agent, context=context, query=query))
     
@@ -57,10 +56,10 @@ class ServiceModel():
             text += "\n - " + doc.page_content
         return text
     
-    def suggest_topics(self, nb=10):
-        topics = self.db.select_topics()
+    def suggest_topics(self, sdb:SessionDB, nb=10):
+        topics = sdb.select_topics()
         prompt = PromptTemplate.from_template(template.topics_suggested)
-        knowledge = self.db.select_knowledge()
+        knowledge = sdb.select_knowledge()
         names = list_to_string(list_obj_attribute(topics, 'name'))
         result = self.submit_prompt(prompt.format(agent=knowledge.agent, topics=names))
         try:

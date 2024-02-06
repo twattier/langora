@@ -32,11 +32,11 @@ class ServiceTask():
             self.queue_tasks[queue_name] = Queue(f'{Config.REDIS_QUEUE}-{queue_name}', connection=self.conn)              
 
     def launch_task(self, queue_name, cmd:str, *args, **kwargs)->Task:
-        # if self.is_queue_or_running(queue_name, cmd, args):
+        # if self._is_queue_or_running(queue_name, cmd, args):
         #     return None #avoid launch twice
         return Task(self.queue_tasks[queue_name].enqueue(f'{cmd}', *args, **kwargs))
     
-    def is_queue_or_running(self, queue_name, cmd:str, args):        
+    def _is_queue_or_running(self, queue_name, cmd:str, args):        
         task_cmd = "task.%s(%s)" % (cmd, args_to_string(args))        
         tasks = self.list_tasks_status(queue_name, "pending")
         return any(t.cmd == task_cmd for t in tasks)
@@ -81,7 +81,7 @@ class QueueTask(ABC):
     def __init__(self, tasks:ServiceTask) -> None:
         self.tasks = tasks  
 
-    def parse_cmd(self, cmd:str)->(str, []):
+    def _parse_cmd(self, cmd:str)->(str, []):
         idxf = cmd.rfind('.')
         idxp = cmd.find('(')        
         func = cmd[idxf+1:idxp]

@@ -27,7 +27,6 @@ if Config.DEBUG:
     svc.register_blueprint(rq_dashboard.blueprint, url_prefix="/rq")
 
 app = Langora(is_task_mode=True)
-app.init_store_model()
 
 # ---------------------------------------------------------------------------
 # Mapping
@@ -113,69 +112,51 @@ similarity_sources_schema = SimilaritySourceSchema(many=True)
 class Knowledge(Resource):
     @api.doc('Get Knowledge base information')
     def get(self):
-        global app        
-        try:
-            app.db.open_session()
-            data = app.db.select_knowledge()
-            return knowledge_schema.dump(data)
-        finally:
-            app.db.close_session()    
+        global app       
+        sdb = app.create_session()
+        data = sdb.select_knowledge()
+        return knowledge_schema.dump(data)
 
 @api.route('/knowledge/stats', methods=['GET'])
 class Stats(Resource):
     @api.doc('Get Knowledge base statistics')
     def get(self):
-        global app        
-        try:
-            app.db.open_session()            
-            return app.stats()
-        finally:
-            app.db.close_session()    
+        global app                  
+        return app.stats()
 
-parser_topics = reqparse.RequestParser()
-parser_topics.add_argument('topics', action='split')
 @api.route('/topics', methods=['GET', 'POST'])
 class Topics(Resource):
     @api.doc('Get topics')
     def get(self):
-        global app        
-        try:
-            app.db.open_session()
-            data = app.db.select_topics()            
-            return topics_schema.dump(data)
-        finally:
-            app.db.close_session()
+        global app    
+        sdb = app.create_session()
+        data = sdb.select_topics()
+        return topics_schema.dump(data)
 
     @api.doc('Add topics')
     def post(self):
         global app   
-        args = parser_topics.parse_args()
-        app.add_topics(args['topics'], up_to_store_id=STORE.SRC_SUMMARY.value)
+        data = request.get_json()        
+        app.add_topics(data['topics'], up_to_store_id=STORE.SRC_SUMMARY.value)
 
 
 @api.route('/searches', methods=['GET'])
 class Searches(Resource):
     @api.doc('Get searches')
     def get(self):
-        global app        
-        try:
-            app.db.open_session()
-            data = app.db.select_top_searches(max=5)
-            return searches_short_schema.dump(data)
-        finally:
-            app.db.close_session()
+        global app
+        sdb = app.create_session()
+        data = sdb.select_top_searches(max=5)
+        return searches_short_schema.dump(data)
 
 @api.route('/sources', methods=['GET'])
 class Sources(Resource):
     @api.doc('Get sources')
     def get(self):
-        global app        
-        try:
-            app.db.open_session()
-            data = app.db.select_top_sources(max=5)
-            return sources_short_schema.dump(data)
-        finally:
-            app.db.close_session()
+        global app
+        sdb = app.create_session()      
+        data = sdb.select_top_sources(max=5)
+        return sources_short_schema.dump(data)
 
 @api.route('/similarities', methods=['GET'])
 @api.param('query', 'Query for similarity research')
@@ -183,47 +164,44 @@ class SourceSimilarities(Resource):
     @api.doc('Similarity research')
     def get(self):
         global app
+        sdb = app.create_session()
         query = request.args.get('query')
-        try:
-            app.db.open_session()
-            data = {}
-            data['query'] = query
-            sim_sources = app.db.similarity_sources(query)
-            data['sources'] = similarity_sources_schema.dump(sim_sources)
-            sim_searches = app.db.similarity_searches(query)
-            data['searches'] = similarity_searches_schema.dump(sim_searches)            
-            return data
-        finally:
-            app.db.close_session()    
-
+        
+        data = {}
+        data['query'] = query
+        sim_sources = app.db.vector.similarity_sources(sdb, query)
+        data['sources'] = similarity_sources_schema.dump(sim_sources)
+        sim_searches = app.db.vector.similarity_searches(sdb, query)
+        data['searches'] = similarity_searches_schema.dump(sim_searches)            
+        return data
+        
 @api.route('/genai', methods=['GET'])
 @api.param('query', 'Query for genAI')
 class genAI(Resource):
     @api.doc('genAI')
     def get(self):
         global app
-        query = request.args.get('query')
-        try:
-            app.db.open_session()
-            response, sim_docs, sim_sources, sim_searches = app.genAI(query)
-            data = {}
-            data['query'] = query
-            data['response'] = response
-            data['docs'] = similarity_sources_schema.dump(sim_docs)
-            data['similarities'] = {'query': query, 
-                                    'sources': similarity_sources_schema.dump(sim_sources),
-                                    'searches': similarity_searches_schema.dump(sim_searches)
-                                    } 
-            return data
-        finally:
-            app.db.close_session()   
+        sdb = app.create_session()
+        query = request.args.get('query')        
+        response, sim_docs, sim_sources, sim_searches = app.genAI(sdb, query)
+        data = {}
+        data['query'] = query
+        data['response'] = response
+        data['docs'] = similarity_sources_schema.dump(sim_docs)
+        data['similarities'] = {'query': query, 
+                                'sources': similarity_sources_schema.dump(sim_sources),
+                                'searches': similarity_searches_schema.dump(sim_searches)
+                                } 
+        return data
+        
 
 @api.route('/topics/suggest', methods=['GET'])
 class SuggestTopics(Resource):
     @api.doc('Suggest Topics')
     def get(self):
         global app
-        return app.model.suggest_topics()
+        sdb = app.create_session()
+        return app.model.suggest_topics(sdb)
 
 # ---------------------------------------------------------------------------
 # Task
@@ -235,13 +213,10 @@ class StatusTasks(Resource):
     def get(self, status_type):
         if status_type not in SEARCH_STATUS:
             api.abort(404)
-        global app        
-        try:
-            app.db.open_session()   
-            data =  app.loader.list_tasks(status_type)
-            return tasks_schema.dump(data)  
-        finally:
-            app.db.close_session()
+        global app
+        loader = app.create_loader()
+        data = loader.list_tasks(status_type)
+        return tasks_schema.dump(data)  
     
 @ns_task.route('/knowledge/update', methods=['GET'])
 @ns_task.param('summarize', 'Update up to summarization (0/1)')
@@ -257,11 +232,8 @@ class SourceExtract(Resource):
     @api.doc('Launch Task to fill empty source extraction')
     def get(self):
         global app
-        try:
-            app.db.open_session()   
-            app.loader.update_extract_sources()                  
-        finally:
-            app.db.close_session()
+        loader = app.create_loader()
+        loader.update_extract_sources()                  
     
 if __name__ == '__main__':
     svc.run(host='0.0.0.0', port=5000, debug=Config.DEBUG)

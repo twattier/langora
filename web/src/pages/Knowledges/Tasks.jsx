@@ -63,11 +63,15 @@ export default function Tasks() {
             </Box>
           ) : (
             <Stack>
-              <Switch label="Auto Refresh" 
+              <Box>
+              <Switch control={<Switch defaultChecked />}
               onChange={(event) =>
                 setAutoRefresh(event.target.checked)
               }
               />
+              Auto Refresh
+              </Box>
+              
               <DataGrid
                 rows={tasks}
                 columns={columns}

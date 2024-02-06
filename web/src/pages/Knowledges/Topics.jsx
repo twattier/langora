@@ -71,7 +71,7 @@ export default function Topics() {
               </ListTopicButton>
             </List>
             <Divider />
-            <List>
+            <List dense>
               {topics?.map((topic) => (
                 <ListTopicButton
                   selected={selectedTopic?.id === topic.id}
@@ -102,7 +102,7 @@ export default function Topics() {
                   </ListTopicButton>
                 </List>
                 <Divider />
-                <List>
+                <List dense>
                   {selectedTopic.searches?.map((search) => (
                     <ListTopicButton>
                       <Typography variant="body2">
