@@ -8,7 +8,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Switch from '@mui/material/Switch'
 
 import { ContentBox, ActionButton } from '../../utils/style/component'
-import NavBar from '../../components/Knowledges/NavBar'
+import NavBar from '../../components/App/NavBar'
 import { baseURL, useFetchTasks } from '../../utils/hooks'
 
 export default function Tasks() {
@@ -46,8 +46,8 @@ export default function Tasks() {
   ]
 
   const apiUpdate = () => {
-    const url = `${baseURL}/tasks/knowledge/update`
-    fetch(url, { method: 'GET' }).then(window.location.reload())
+    const url = `${baseURL}/knowledges/extract`
+    fetch(url, { method: 'POST' }).then(window.location.reload())
   }
 
   return (

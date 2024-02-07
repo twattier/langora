@@ -132,8 +132,8 @@ export function useFetchTopSearches() {
   return { topSearches, isLoadingTopSearches, errorLoadingTopSearches }
 }
 
-export function useFetchSimilarities(query) {
-  const url = `${baseURL}/similarities?query=${query}`
+export function useFetchSimilarities(type, query) {
+  const url = `${baseURL}/${type}/similarities?query=${query}`
   const [similarities, setSimilarities] = useState({})
   const [isLoadingSimilarities, setLoadingSimilarities] = useState(true)
   const [errorLoadingSimilarities, setErrorLoadingSimilarities] =
@@ -161,7 +161,7 @@ export function useFetchSimilarities(query) {
 }
 
 export function useFetchGenAI(query) {
-  const url = `${baseURL}/genai?query=${query}`
+  const url = `${baseURL}/knowledges/genai?query=${query}`
   const [resultGenAI, setResultGenAI] = useState({})
   const [isLoadingResultGenAI, setLoadingResultGenAI] = useState(true)
   const [errorLoadingResultGenAI, setErrorLoadingResultGenAI] = useState(false)

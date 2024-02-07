@@ -4,6 +4,7 @@ import { styled } from '@mui/system'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 
+import ChatIcon from '@mui/icons-material/Chat';
 import TopicIcon from '@mui/icons-material/Topic'
 import SearchIcon from '@mui/icons-material/Search'
 import DescriptionIcon from '@mui/icons-material/Description'
@@ -23,6 +24,12 @@ export default function NavBar(props) {
       indicatorColor="secondary"
       sx={{ mb: 1 }}
     >
+      <CustomTab
+        value="ask"
+        icon={<ChatIcon />}
+        label="Ask"
+        href="/"
+      />
       <CustomTab
         value="topics"
         icon={<TopicIcon />}

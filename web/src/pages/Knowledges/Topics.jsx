@@ -14,7 +14,7 @@ import TopicIcon from '@mui/icons-material/Topic'
 import SearchIcon from '@mui/icons-material/Search'
 
 import { ContentBox } from '../../utils/style/component'
-import NavBar from '../../components/Knowledges/NavBar'
+import NavBar from '../../components/App/NavBar'
 import AddTopic from '../../components/Knowledges/AddTopic'
 
 import { useFetchTopics } from '../../utils/hooks'

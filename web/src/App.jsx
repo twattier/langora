@@ -22,9 +22,9 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ pl: 1 }}>
+      {/* <Box sx={{ pl: 1 }}>
         <Menu />
-      </Box>
+      </Box> */}
       <Box component="main" flex={1}>
         <Router>
           <Routes>

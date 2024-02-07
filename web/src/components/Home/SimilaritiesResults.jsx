@@ -7,7 +7,7 @@ import Divider from '@mui/material/Divider'
 import ListItemSearch from '../atoms/ListItemSearch'
 import ListItemSource from '../atoms/ListItemSource'
 
-export default function QueryResults(props) {
+export default function SimilaritiesResults(props) {
   const { similarities } = props
 
   return (

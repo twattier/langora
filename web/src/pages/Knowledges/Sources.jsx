@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 
 import { ContentBox } from '../../utils/style/component'
-import NavBar from '../../components/Knowledges/NavBar'
+import NavBar from '../../components/App/NavBar'
 
 export default function Sources() {
   return (

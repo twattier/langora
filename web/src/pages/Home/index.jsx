@@ -3,6 +3,7 @@ import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Grid from '@mui/material/Grid'
 
+import NavBar from '../../components/App/NavBar'
 import Banner from '../../components/Home/Banner'
 import InputQueryGenAI from '../../components/Home/InputQueryGenAI'
 import GenAIResult from '../../components/Home/GenAIResult'
@@ -25,6 +26,7 @@ export default function Home() {
 
   return (
     <Stack spacing={2}>
+      <NavBar selected="ask" />
       <Banner />
       <InputQueryGenAI onQueryGenAI={onQueryGenAI} />
       <Box sx={{pl:1}}>
