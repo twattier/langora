@@ -7,7 +7,7 @@ from marshmallow import Schema, fields
 
 
 from config.env import Config
-from db.datamodel import Knowledge, Topic, Search, Source
+from db.datamodel import Knowledge, Topic, Search, Source, SearchSource
 from task.service_task import SEARCH_STATUS
 from langora import Langora
 from db.dbvector import STORE
@@ -43,24 +43,6 @@ class KnowledgeSchema(ma.SQLAlchemySchema):
     agent = ma.auto_field()
 knowledge_schema = KnowledgeSchema()
 
-class SearchShortSchema(ma.SQLAlchemySchema):
-    class Meta:
-        model = Search
-    id = ma.auto_field()
-    query = ma.auto_field()
-    nb_sources = fields.Function(lambda obj: obj.nb_sources())
-search_short_schema = SearchShortSchema()
-searches_short_schema = SearchShortSchema(many=True)
-
-class TopicSchema(ma.SQLAlchemySchema):
-    class Meta:
-        model = Topic
-    id = ma.auto_field()
-    name = ma.auto_field()
-    searches =  Nested(SearchShortSchema, many=True)
-topic_schema = TopicSchema()
-topics_schema = TopicSchema(many=True)
-
 class SourceShortSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Source
@@ -71,6 +53,47 @@ class SourceShortSchema(ma.SQLAlchemySchema):
     snippet = ma.auto_field()
 source_short_schema = SourceShortSchema()
 sources_short_schema = SourceShortSchema(many=True)
+
+class SearchSourceSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = SearchSource
+    rank = ma.auto_field()
+    date_created = ma.auto_field()
+    source = Nested(SourceShortSchema)
+
+class SearchShortSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Search
+    id = ma.auto_field()
+    query = ma.auto_field()
+    nb_sources = fields.Function(lambda obj: obj.nb_sources())
+search_short_schema = SearchShortSchema()
+searches_short_schema = SearchShortSchema(many=True)
+
+class TopicShortSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Topic
+    id = ma.auto_field()
+    name = ma.auto_field()
+
+class TopicSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Topic
+    id = ma.auto_field()
+    name = ma.auto_field()
+    searches =  Nested(SearchShortSchema, many=True)
+topic_schema = TopicSchema()
+topics_schema = TopicSchema(many=True)
+
+class SearchSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Search
+    id = ma.auto_field()
+    query = ma.auto_field()
+    date_created = ma.auto_field()
+    topics = Nested(TopicShortSchema, many=True)
+    search_sources = Nested(SearchSourceSchema, many=True)    
+search_schema = SearchSchema()
 
 class TaskSchema(Schema):
     id = fields.Str()
@@ -119,9 +142,12 @@ class Knowledge(Resource):
     @ns_knowledges.doc('Get Knowledge base information')
     def get(self):
         global app       
-        sdb = app.create_session()
-        data = sdb.select_knowledge()
-        return knowledge_schema.dump(data)
+        try:
+            sdb = app.create_session()
+            data = sdb.select_knowledge()
+            return knowledge_schema.dump(data)
+        finally:
+            sdb.close()
 
 @ns_knowledges.route('/stats', methods=['GET'])
 class Stats(Resource):
@@ -136,16 +162,19 @@ class SourceSimilarities(Resource):
     @ns_knowledges.doc('Similarity research')
     def get(self):
         global app
-        sdb = app.create_session()
-        query = request.args.get('query')
-        
-        data = {}
-        data['query'] = query
-        sim_sources = app.db.vector.similarity_sources(sdb, query)
-        data['sources'] = similarity_sources_schema.dump(sim_sources)
-        sim_searches = app.db.vector.similarity_searches(sdb, query)
-        data['searches'] = similarity_searches_schema.dump(sim_searches)            
-        return data
+        try:
+            sdb = app.create_session()
+            query = request.args.get('query')
+            
+            data = {}
+            data['query'] = query
+            sim_sources = app.db.vector.similarity_sources(sdb, query)
+            data['sources'] = similarity_sources_schema.dump(sim_sources)
+            sim_searches = app.db.vector.similarity_searches(sdb, query)
+            data['searches'] = similarity_searches_schema.dump(sim_searches)            
+            return data
+        finally:
+            sdb.close()
 
        
 @ns_knowledges.route('/genai', methods=['GET'])
@@ -154,18 +183,21 @@ class genAI(Resource):
     @ns_knowledges.doc('genAI')
     def get(self):
         global app
-        sdb = app.create_session()
-        query = request.args.get('query')        
-        response, sim_docs, sim_sources, sim_searches = app.genAI(sdb, query)
-        data = {}
-        data['query'] = query
-        data['response'] = response
-        data['docs'] = similarity_sources_schema.dump(sim_docs)
-        data['similarities'] = {'query': query, 
-                                'sources': similarity_sources_schema.dump(sim_sources),
-                                'searches': similarity_searches_schema.dump(sim_searches)
-                                } 
-        return data
+        try:
+            sdb = app.create_session()
+            query = request.args.get('query')        
+            response, sim_docs, sim_sources, sim_searches = app.genAI(sdb, query)
+            data = {}
+            data['query'] = query
+            data['response'] = response
+            data['docs'] = similarity_sources_schema.dump(sim_docs)
+            data['similarities'] = {'query': query, 
+                                    'sources': similarity_sources_schema.dump(sim_sources),
+                                    'searches': similarity_searches_schema.dump(sim_searches)
+                                    } 
+            return data
+        finally:
+            sdb.close()
     
 @ns_knowledges.route('/extract', methods=['POST'])
 @ns_knowledges.param('summarize', 'Update up to summarization (0/1)')
@@ -184,9 +216,12 @@ class Topics(Resource):
     @ns_topics.doc('Get topics')
     def get(self):
         global app    
-        sdb = app.create_session()
-        data = sdb.select_topics()
-        return topics_schema.dump(data)
+        try:
+            sdb = app.create_session()
+            data = sdb.select_topics()
+            return topics_schema.dump(data)
+        finally:
+            sdb.close()
 
     @ns_topics.doc('Add topics')
     def post(self):
@@ -199,8 +234,11 @@ class SuggestTopics(Resource):
     @ns_topics.doc('Suggest Topics')
     def get(self):
         global app
-        sdb = app.create_session()
-        return app.model.suggest_topics(sdb)
+        try:
+            sdb = app.create_session()
+            return app.model.suggest_topics(sdb)
+        finally:
+            sdb.close()
     
 # ---------------------------------------------------------------------------
 # Searches
@@ -210,9 +248,24 @@ class Searches(Resource):
     @ns_searches.doc('Get searches')
     def get(self):
         global app
-        sdb = app.create_session()
-        data = sdb.select_top_searches(max=5)
-        return searches_short_schema.dump(data)
+        try:
+            sdb = app.create_session()
+            data = sdb.select_top_searches(max=5)
+            return searches_short_schema.dump(data)
+        finally:
+            sdb.close()
+
+@ns_searches.route('/<search_id>', methods=['GET'])
+class Searche(Resource):
+    @ns_searches.doc('Get searche')
+    def get(self, search_id):
+        global app
+        try:
+            sdb = app.create_session()
+            data = sdb.select_search_by_id(search_id)
+            return search_schema.dump(data)
+        finally:
+            sdb.close()
     
 @ns_searches.route('/similarities', methods=['GET'])
 @ns_searches.param('query', 'Query for similarity research')
@@ -220,14 +273,17 @@ class SourceSimilarities(Resource):
     @ns_searches.doc('Similarity research')
     def get(self):
         global app
-        sdb = app.create_session()
-        query = request.args.get('query')
-        
-        data = {}
-        data['query'] = query        
-        sim_searches = app.db.vector.similarity_searches(sdb, query, nb=10)
-        data['searches'] = similarity_searches_schema.dump(sim_searches)            
-        return data
+        try:
+            sdb = app.create_session()
+            query = request.args.get('query')
+            
+            data = {}
+            data['query'] = query        
+            sim_searches = app.db.vector.similarity_searches(sdb, query, nb=10)
+            data['searches'] = similarity_searches_schema.dump(sim_searches)            
+            return data
+        finally:
+            sdb.close()
 
 # ---------------------------------------------------------------------------
 # Sources
@@ -237,17 +293,23 @@ class Sources(Resource):
     @ns_sources.doc('Get sources')
     def get(self):
         global app
-        sdb = app.create_session()      
-        data = sdb.select_top_sources(max=5)
-        return sources_short_schema.dump(data)
+        try:
+            sdb = app.create_session()      
+            data = sdb.select_top_sources(max=5)
+            return sources_short_schema.dump(data)
+        finally:
+            sdb.close()
     
-@ns_sources.route('/extract', methods=['POST'])
-class SourceExtract(Resource):
-    @ns_sources.doc('Launch Task to fill empty source extraction')
+@ns_sources.route('/summaries', methods=['POST'])
+class SourcesSummaries(Resource):
+    @ns_sources.doc('Launch Task to fill empty source summary')
     def post(self):
         global app
-        loader = app.create_loader()
-        loader.update_extract_sources()             
+        try:
+            loader = app.create_loader()
+            loader.update_summarize_sources()
+        finally:
+            loader.sdb.close()
 
 # ---------------------------------------------------------------------------
 # Task
@@ -261,9 +323,12 @@ class StatusTasks(Resource):
         if status_type not in SEARCH_STATUS:
             api.abort(404)
         global app
-        loader = app.create_loader()
-        data = loader.list_tasks(status_type)
-        return tasks_schema.dump(data)        
+        try:
+            loader = app.create_loader()
+            data = loader.list_tasks(status_type)
+            return tasks_schema.dump(data)        
+        finally:
+            loader.sdb.close()
     
 if __name__ == '__main__':
     svc.run(host='0.0.0.0', port=5000, debug=Config.DEBUG)

@@ -32,6 +32,7 @@ export default function App() {
             <Route path="/knowledges" element={<Topics />} />
             <Route path="/knowledges/topics" element={<Topics />} />
             <Route path="/knowledges/searches" element={<Searches />} />
+            <Route path="/knowledges/searches/:searchId" element={<Searches />} />
             <Route path="/knowledges/sources" element={<Sources />} />
             <Route path="/knowledges/tasks" element={<Tasks />} />
             <Route path="*" element={<Error />} />

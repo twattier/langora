@@ -1,20 +1,28 @@
 import * as React from 'react'
 import { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 
 import { ContentBox } from '../../utils/style/component'
 import NavBar from '../../components/App/NavBar'
 import SimilaritySearches from '../../components/Knowledges/SimilaritySearches'
+import CardSearch from '../../components/Knowledges/CardSearch'
 import SearchIcon from '@mui/icons-material/Search'
 
 import { ActionButton, InputText } from '../../utils/style/component'
 
-export default function Searches() {
+export default function Searches(props) {
+  const { searchId } = useParams()
   const [valueSearch, setValueSearch] = useState('')
   const [querySearch, setQuerySearch] = useState()
-  const onQuerySearch = (query) => {    
+  const onQuerySearch = (query) => {
     setQuerySearch(query)
+  }
+
+  const [selectedSearchId, setSelectedSearchId] = useState(searchId)
+  const onSelectSearch = (search) => {
+    setSelectedSearchId(search.id)
   }
 
   return (
@@ -37,12 +45,20 @@ export default function Searches() {
       </Stack>
 
       {!querySearch ? null : (
-      <ContentBox>
-          <Box sx={{p:1}}>
-          <SimilaritySearches query={querySearch} />
+        <ContentBox>
+          <Box sx={{ p: 1 }}>
+            <SimilaritySearches
+              query={querySearch}
+              onSelectSearch={onSelectSearch}
+            />
           </Box>
-      </ContentBox>
+        </ContentBox>
       )}
+
+      {!selectedSearchId ? null : (
+        <CardSearch searchId={selectedSearchId} />
+      )}
+
     </Stack>
   )
 }

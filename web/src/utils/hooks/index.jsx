@@ -29,7 +29,7 @@ export function useFetch(url) {
 export const baseURL = 'http://localhost/api'
 
 export function useFetchKnowledge() {
-  const url = `${baseURL}/knowledge`
+  const url = `${baseURL}/knowledges`
   const [knowledge, setknowledge] = useState({})
   const [isLoadingknowledge, setLoadingknowledge] = useState(true)
   const [errorLoadingknowledge, setErrorLoadingknowledge] = useState(false)
@@ -130,6 +130,32 @@ export function useFetchTopSearches() {
     fetchData()
   }, [url])
   return { topSearches, isLoadingTopSearches, errorLoadingTopSearches }
+}
+
+export function useFetchSearch(searchId) {
+  const url = `${baseURL}/searches/${searchId}`
+  const [search, setSearch] = useState({})
+  const [isLoadingSearch, setLoadingSearch] = useState(true)
+  const [errorLoadingSearch, setErrorLoadingSearch] = useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    setLoadingSearch(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setSearch(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingSearch(true)
+      } finally {
+        setLoadingSearch(false)
+      }
+    }
+    fetchData()
+  }, [url])
+  return { search, isLoadingSearch, errorLoadingSearch }
 }
 
 export function useFetchSimilarities(type, query) {

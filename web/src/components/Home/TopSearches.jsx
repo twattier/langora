@@ -5,8 +5,8 @@ import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
 
-import { ContentBox } from '../../utils/style/component'
-import ListItemSearch from '../atoms/ListItemSearch'
+import { ContentBox, ContentBoxTitle } from '../../utils/style/component'
+import ListSearches from '../atoms/ListSearches'
 import { useFetchTopSearches } from '../../utils/hooks'
 
 export default function TopSearches() {
@@ -22,18 +22,9 @@ export default function TopSearches() {
         <CircularProgress />
       ) : (
         <Stack spacing={1} sx={{ m: 1 }}>
-          <Typography
-            variant="subtitle1"
-            align="center"
-            color="primary"
-            sx={{ fontWeight: 'bold' }}
-          >
-            Top Searches
-          </Typography>
+          <ContentBoxTitle>Top Searches</ContentBoxTitle>
           <Divider />
-          {topSearches?.map((search) => (       
-             <ListItemSearch search={search} />
-          ))}
+          <ListSearches searches={topSearches} />
         </Stack>
       )}
     </ContentBox>

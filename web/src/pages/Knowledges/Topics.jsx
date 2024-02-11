@@ -11,11 +11,11 @@ import ListItemText from '@mui/material/ListItemText'
 import CircularProgress from '@mui/material/CircularProgress'
 import AddIcon from '@mui/icons-material/Add'
 import TopicIcon from '@mui/icons-material/Topic'
-import SearchIcon from '@mui/icons-material/Search'
 
-import { ContentBox } from '../../utils/style/component'
+import { ContentBox, ContentBoxTitle } from '../../utils/style/component'
 import NavBar from '../../components/App/NavBar'
 import AddTopic from '../../components/Knowledges/AddTopic'
+import ListSearches from '../../components/atoms/ListSearches'
 
 import { useFetchTopics } from '../../utils/hooks'
 
@@ -28,13 +28,6 @@ export default function Topics() {
   }
 
   const theme = useTheme()
-  const ListTopicButton = styled(ListItemButton)(({ theme }) => ({
-    '& .MuiListItemButton-root': {
-      '&.Mui-selected': {
-        color: theme.palette.secondary.main,
-      },
-    },
-  }))
 
   if (errorLoadingTopics) {
     return <span>Impossible to load the liste of Tasks</span>
@@ -50,36 +43,31 @@ export default function Topics() {
         <Stack direction="row" spacing={1}>
           <ContentBox sx={{ ml: 1, width: '30%' }}>
             <List>
-              <ListTopicButton
+              <ListItemButton
                 onClick={(event) => handleListItemClick(event, undefined)}
               >
-                <AddIcon
-                  sx={{
-                    border: 1,
-                    borderRadius: 8,
-                    mr: 2,
-                    color: theme.palette.primary.main,
-                  }}
-                />
-                <ListItemText
-                  primary="Topics"
-                  primaryTypographyProps={{
-                    color: theme.palette.primary.main,
-                    fontWeight: 'bold',
-                  }}
-                />
-              </ListTopicButton>
+                <ContentBoxTitle>
+                  <AddIcon
+                    sx={{
+                      border: 1,
+                      borderRadius: 8,
+                      mr: 1,
+                    }}
+                  />
+                  Topics
+                </ContentBoxTitle>
+              </ListItemButton>
             </List>
             <Divider />
             <List dense>
               {topics?.map((topic) => (
-                <ListTopicButton
+                <ListItemButton
                   selected={selectedTopic?.id === topic.id}
                   onClick={(event) => handleListItemClick(event, topic)}
                 >
                   <TopicIcon sx={{ mr: 1 }} />
                   {topic.name}
-                </ListTopicButton>
+                </ListItemButton>
               ))}
             </List>
           </ContentBox>
@@ -89,29 +77,15 @@ export default function Topics() {
             ) : (
               <Box>
                 <List>
-                  <ListTopicButton>
-                    <Typography
-                      variant="subtitle1"
-                      align="center"
-                      color="primary"
-                      sx={{ fontWeight: 'bold' }}
-                    >
+                  <ListItemButton>
+                    <ContentBoxTitle>
                       <TopicIcon sx={{ mr: 1 }} />
                       {selectedTopic.name}
-                    </Typography>
-                  </ListTopicButton>
+                    </ContentBoxTitle>
+                  </ListItemButton>
                 </List>
                 <Divider />
-                <List dense>
-                  {selectedTopic.searches?.map((search) => (
-                    <ListTopicButton>
-                      <Typography variant="body2">
-                        <SearchIcon sx={{ mr: 1 }} />
-                        {`${search.query} [${search.nb_sources}]`}
-                      </Typography>
-                    </ListTopicButton>
-                  ))}
-                </List>
+                <ListSearches searches={selectedTopic.searches} />
               </Box>
             )}
           </ContentBox>

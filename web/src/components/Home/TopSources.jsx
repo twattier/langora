@@ -5,9 +5,8 @@ import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
 
-
 import ListItemSource from '../atoms/ListItemSource'
-import { ContentBox } from '../../utils/style/component'
+import { ContentBox, ContentBoxTitle } from '../../utils/style/component'
 import { useFetchTopSources } from '../../utils/hooks'
 
 export default function TopSources() {
@@ -23,14 +22,7 @@ export default function TopSources() {
         <CircularProgress />
       ) : (
         <Stack spacing={1} sx={{ m: 1 }}>
-          <Typography
-            variant="subtitle1"
-            align="center"
-            color="primary"
-            sx={{ fontWeight: 'bold' }}
-          >
-            Top Sources
-          </Typography>
+          <ContentBoxTitle>Top Sources</ContentBoxTitle>
           <Divider />
           {topSources?.map((source) => (
             <ListItemSource source={source} />

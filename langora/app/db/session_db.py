@@ -21,7 +21,7 @@ class SessionDB():
                                 autocommit=False
                                 )
     
-    def __del__(self)->None:
+    def close(self)->None:
         self.session.close() 
         self.connection.close()
 

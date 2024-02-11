@@ -3,6 +3,7 @@ import { styled } from '@mui/system'
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
+import { Typography } from '@mui/material'
 
 export const ContentBox = styled((props) => <Box {...props} />)(
   ({ theme }) => ({
@@ -12,6 +13,12 @@ export const ContentBox = styled((props) => <Box {...props} />)(
     borderRadius: '4px',
   })
 )
+export const ContentBoxTitle = styled((props) => (
+  <Typography variant="subtitle1" align="center" color="primary" {...props} />
+  ))
+  (({ theme }) => ({
+    fontWeight: 'bold',    
+  }))
 
 export const InputText = styled((props) => <TextField {...props} />)(
   ({ theme }) => ({
@@ -40,8 +47,8 @@ export const ButtonGenAI = styled(Button)(({ theme }) => ({
   border: 1,
   borderColor: theme.palette.secondary.dark,
   borderRadius: 8,
-  color: '#fff'
-}));
+  color: '#fff',
+}))
 
 export const ActionButton = styled(Button)(({ theme }) => ({
   backgroundColor: '#fff',
