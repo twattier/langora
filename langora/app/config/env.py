@@ -10,6 +10,19 @@ class AppConfigError(Exception):
 def _parse_bool(val: Union[str, bool]) -> bool:  # pylint: disable=E1136 
     return val if type(val) == bool else val.lower() in ['true', 'yes', '1']
 
+def _get_secrets(file:str)->dict:
+    in_docker = os.environ.get('IN_DOCKER', False)
+    path =  f'/run/secrets/{file}' if in_docker else f'../../{file}.txt'
+    dict = {}
+    with open(path) as fs:
+        for line in fs.readlines():
+            if line.strip()=="":
+                continue
+            parts = line.split("=")
+            dict[parts[0].strip()] = parts[1].replace('"', '').replace("'", "").strip()
+    return dict
+
+
 # AppConfig class with required fields, default values, type checking, and typecasting for int and bool values
 class AppConfig:
     ENV:str = 'production'
@@ -47,12 +60,21 @@ class AppConfig:
       - Class field and environment variable name are the same
     """
     def __init__(self, env):
+        secrets = _get_secrets("api_secrets")
         for field in self.__annotations__:
             if not field.isupper():
                 continue
+            
+            default_value = getattr(self, field, None)
+            
+            #Fill will secret if available
+            secret = secrets.get(field)
+            if secret :                
+                self.__setattr__(field, secret)
+                os.environ[field] = secret
+                continue
 
             # Raise AppConfigError if required field not supplied
-            default_value = getattr(self, field, None)
             if default_value is None and env.get(field) is None:
                 raise AppConfigError('The {} field is required'.format(field))
 

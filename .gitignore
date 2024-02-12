@@ -63,3 +63,4 @@ conda_promt.lnk
 
 #Ignore in project
 storage/
+api_secrets.txt
