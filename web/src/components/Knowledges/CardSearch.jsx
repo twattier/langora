@@ -7,10 +7,9 @@ import CircularProgress from '@mui/material/CircularProgress'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 
-// import ListItemSource from '../atoms/ListItemSource'
 import { ContentBox, ContentBoxTitle } from '../../utils/style/component'
 import { useFetchSearch } from '../../utils/hooks'
-import ListItemSource from '../atoms/ListItemSource'
+import ListItemSource from '../Atoms/ListItemSource'
 
 export default function CardSearch(props) {
   const { searchId } = props

@@ -1,3 +1,4 @@
+import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -10,14 +11,22 @@ export default function ListSearches(props) {
     <List dense>
       {searches?.map((search) => (
         <ListItemButton
-          onClick={(event) =>
+          sx={{ pt: 0, pb: 0 }}
+          onClick={() =>
             (window.location.href = '/knowledges/searches/' + search.id)
           }
         >
-          <Typography variant="body2">
+          <Stack
+            direction="row"
+            justifyContent="flex-start"
+            alignItems="center"
+            sx={{ height: 24 }}
+          >
             <SearchIcon sx={{ mr: 1 }} />
-            {`${search.query} [${search.nb_sources}]`}
-          </Typography>
+            <Typography variant="body2">
+              {`${search.query}`}
+            </Typography>
+          </Stack>
         </ListItemButton>
       ))}
     </List>

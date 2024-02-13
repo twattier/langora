@@ -33,14 +33,14 @@ class Langora():
     # ---------------------------------------------------------------------------
 
     def install_db_knowledge(self, agent:str, topics:list[str],
-                            up_to_store:STORE=STORE.SOURCE):
+                            up_to_store=STORE.SOURCE):
         try:
             loader = self.create_loader()
             loader.init_knowledge(agent, topics, up_to_store)
         finally:
             loader.sdb.close()
         
-    def update_db_knowledge(self, up_to_store:STORE=STORE.SOURCE):
+    def update_db_knowledge(self, up_to_store=STORE.SOURCE):
         try:
             sdb = self.create_session()
             loader = self.create_loader(sdb=sdb)

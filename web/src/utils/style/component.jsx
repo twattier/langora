@@ -14,10 +14,11 @@ export const ContentBox = styled((props) => <Box {...props} />)(
   })
 )
 export const ContentBoxTitle = styled((props) => (
-  <Typography variant="subtitle1" align="center" color="primary" {...props} />
+  <Typography variant="subtitle1" color="primary" {...props} />
   ))
   (({ theme }) => ({
-    fontWeight: 'bold',    
+    fontWeight: 'bold',   
+    paddingLeft: 16, 
   }))
 
 export const InputText = styled((props) => <TextField {...props} />)(

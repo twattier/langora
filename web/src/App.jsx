@@ -6,7 +6,6 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import { theme } from './utils/style'
 
-import Menu from './components/App/Menu'
 import Footer from './components/App/Footer'
 
 import Home from './pages/Home/'
@@ -34,6 +33,7 @@ export default function App() {
             <Route path="/knowledges/searches" element={<Searches />} />
             <Route path="/knowledges/searches/:searchId" element={<Searches />} />
             <Route path="/knowledges/sources" element={<Sources />} />
+            <Route path="/knowledges/sources/:sourceId" element={<Sources />} />
             <Route path="/knowledges/tasks" element={<Tasks />} />
             <Route path="*" element={<Error />} />
           </Routes>

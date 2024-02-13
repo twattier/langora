@@ -3,24 +3,24 @@ import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
 
-import ListSimilaritySearches from '../Atoms/ListSimilaritySearches'
+import ListSimilaritySources from '../Atoms/ListSimilaritySources'
 import { ContentBoxTitle } from '../../utils/style/component'
 import { useFetchSimilarities } from '../../utils/hooks'
 
-export default function SimilaritySearches(props) {
-  const { query, onSelectSearch } = props
+export default function SimilaritySources(props) {
+  const { query, onSelectSource } = props
 
   const { similarities, isLoadingSimilarities, errorLoadingSimilarities } =
-    useFetchSimilarities('searches', query)
+    useFetchSimilarities('sources', query)
 
-  const handleSelectSearch = (search) => {
-    if (onSelectSearch) {
-      onSelectSearch(search)
+  const handleSelectSource = (source) => {
+    if (onSelectSource) {
+      onSelectSource(source)
     }
   }
 
   if (errorLoadingSimilarities) {
-    return <span>Impossible to load similarity Searches</span>
+    return <span>Impossible to load similarity Sources</span>
   }
 
   return (
@@ -29,11 +29,11 @@ export default function SimilaritySearches(props) {
         <CircularProgress />
       ) : (
         <Stack spacing={1}>
-          <ContentBoxTitle>Searches</ContentBoxTitle>
+          <ContentBoxTitle>Sources</ContentBoxTitle>
           <Divider />
-          <ListSimilaritySearches
-            searches={similarities.searches}
-            onSelectSearch={handleSelectSearch}
+          <ListSimilaritySources
+            sources={similarities.sources}
+            onSelectSource={handleSelectSource}
           />
         </Stack>
       )}

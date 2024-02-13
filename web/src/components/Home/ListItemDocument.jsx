@@ -6,7 +6,7 @@ import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
-import ListItemSource from '../atoms/ListItemSource'
+import ListItemSource from '../Atoms/ListItemSource'
 import { DisplayLines } from '../../utils/display'
 
 export default function ListItemDocument(props) {

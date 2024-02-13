@@ -9,7 +9,7 @@ import InputQueryGenAI from '../../components/Home/InputQueryGenAI'
 import GenAIResult from '../../components/Home/GenAIResult'
 import TopSearches from '../../components/Home/TopSearches'
 import TopSources from '../../components/Home/TopSources'
-import LongProgress from '../../components/atoms/LongProgress'
+import LongProgress from '../../components/Atoms/LongProgress'
 
 import { useFetchGenAI } from '../../utils/hooks'
 

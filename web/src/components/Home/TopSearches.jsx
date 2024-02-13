@@ -6,7 +6,7 @@ import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
 
 import { ContentBox, ContentBoxTitle } from '../../utils/style/component'
-import ListSearches from '../atoms/ListSearches'
+import ListSearches from '../Atoms/ListSearches'
 import { useFetchTopSearches } from '../../utils/hooks'
 
 export default function TopSearches() {

@@ -3,13 +3,12 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
+import SearchIcon from '@mui/icons-material/Search'
 
 import { ContentBox } from '../../utils/style/component'
 import NavBar from '../../components/App/NavBar'
 import SimilaritySearches from '../../components/Knowledges/SimilaritySearches'
 import CardSearch from '../../components/Knowledges/CardSearch'
-import SearchIcon from '@mui/icons-material/Search'
-
 import { ActionButton, InputText } from '../../utils/style/component'
 
 export default function Searches(props) {
@@ -55,10 +54,7 @@ export default function Searches(props) {
         </ContentBox>
       )}
 
-      {!selectedSearchId ? null : (
-        <CardSearch searchId={selectedSearchId} />
-      )}
-
+      {!selectedSearchId ? null : <CardSearch searchId={selectedSearchId} />}
     </Stack>
   )
 }

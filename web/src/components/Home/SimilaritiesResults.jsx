@@ -1,11 +1,11 @@
-import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 
-import ListItemSearch from '../atoms/ListItemSearch'
-import ListItemSource from '../atoms/ListItemSource'
+import { ContentBoxTitle } from '../../utils/style/component'
+import ListSimilaritySearches from '../Atoms/ListSimilaritySearches'
+import ListSimilaritySources from '../Atoms/ListSimilaritySources'
 
 export default function SimilaritiesResults(props) {
   const { similarities } = props
@@ -14,15 +14,9 @@ export default function SimilaritiesResults(props) {
     <Grid container spacing={1} sx={{ pr: 2 }} alignItems="stretch">
       <Grid item sm={12} md={6}>
         <Stack spacing={1}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-            Searches
-          </Typography>
+          <ContentBoxTitle>Searches</ContentBoxTitle>
           <Divider />
-          <Box sw={{ width: '100%' }}>
-            {similarities.searches?.map((sim) => (
-              <ListItemSearch search={sim.search} />
-            ))}
-          </Box>
+          <ListSimilaritySearches searches={similarities.searches} />
         </Stack>
       </Grid>
       <Grid item sm={12} md={6}>
@@ -31,11 +25,7 @@ export default function SimilaritiesResults(props) {
             Sources
           </Typography>
           <Divider />
-          <Box sw={{ width: '100%' }}>
-            {similarities.sources?.map((sim) => (
-              <ListItemSource source={sim.source} />
-            ))}
-          </Box>
+          <ListSimilaritySources sources={similarities.sources}/>          
         </Stack>
       </Grid>
     </Grid>

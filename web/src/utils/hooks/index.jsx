@@ -158,6 +158,32 @@ export function useFetchSearch(searchId) {
   return { search, isLoadingSearch, errorLoadingSearch }
 }
 
+export function useFetchSource(sourceId) {
+  const url = `${baseURL}/sources/${sourceId}`
+  const [source, setSource] = useState({})
+  const [isLoadingSource, setLoadingSource] = useState(true)
+  const [errorLoadingSource, setErrorLoadingSource] = useState(false)
+
+  useEffect(() => {
+    if (!url) return
+    setLoadingSource(true)
+    async function fetchData() {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        setSource(data)
+      } catch (err) {
+        console.log(err)
+        setErrorLoadingSource(true)
+      } finally {
+        setLoadingSource(false)
+      }
+    }
+    fetchData()
+  }, [url])
+  return { source, isLoadingSource, errorLoadingSource }
+}
+
 export function useFetchSimilarities(type, query) {
   const url = `${baseURL}/${type}/similarities?query=${query}`
   const [similarities, setSimilarities] = useState({})

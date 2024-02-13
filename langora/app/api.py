@@ -70,6 +70,28 @@ class SearchShortSchema(ma.SQLAlchemySchema):
 search_short_schema = SearchShortSchema()
 searches_short_schema = SearchShortSchema(many=True)
 
+class SourceSearchSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = SearchSource
+    rank = ma.auto_field()
+    date_created = ma.auto_field()
+    search = Nested(SearchShortSchema)
+
+class SourceSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Source
+    id = ma.auto_field()
+    url = ma.auto_field()
+    site = ma.auto_field()
+    title = ma.auto_field()
+    snippet = ma.auto_field()
+    extract = ma.auto_field()
+    date_extract = ma.auto_field()
+    summary = ma.auto_field()
+    date_summary = ma.auto_field()
+    search_sources = Nested(SourceSearchSchema, many=True)   
+source_schema = SourceSchema()
+
 class TopicShortSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Topic
@@ -250,13 +272,13 @@ class Searches(Resource):
         global app
         try:
             sdb = app.create_session()
-            data = sdb.select_top_searches(max=5)
+            data = sdb.select_top_searches(max=10)
             return searches_short_schema.dump(data)
         finally:
             sdb.close()
 
 @ns_searches.route('/<search_id>', methods=['GET'])
-class Searche(Resource):
+class Search(Resource):
     @ns_searches.doc('Get searche')
     def get(self, search_id):
         global app
@@ -269,7 +291,7 @@ class Searche(Resource):
     
 @ns_searches.route('/similarities', methods=['GET'])
 @ns_searches.param('query', 'Query for similarity research')
-class SourceSimilarities(Resource):
+class SearchesSimilarities(Resource):
     @ns_searches.doc('Similarity research')
     def get(self):
         global app
@@ -295,8 +317,38 @@ class Sources(Resource):
         global app
         try:
             sdb = app.create_session()      
-            data = sdb.select_top_sources(max=5)
+            data = sdb.select_top_sources(max=10)
             return sources_short_schema.dump(data)
+        finally:
+            sdb.close()
+
+@ns_sources.route('/<source_id>', methods=['GET'])
+class Source(Resource):
+    @ns_sources.doc('Get sources')
+    def get(self, source_id):
+        global app
+        try:
+            sdb = app.create_session()      
+            data = sdb.select_source_by_id(source_id)
+            return source_schema.dump(data)
+        finally:
+            sdb.close()
+
+@ns_sources.route('/similarities', methods=['GET'])
+@ns_sources.param('query', 'Query for similarity research')
+class SearchesSimilarities(Resource):
+    @ns_sources.doc('Similarity research')
+    def get(self):
+        global app
+        try:
+            sdb = app.create_session()
+            query = request.args.get('query')
+            
+            data = {}
+            data['query'] = query        
+            sim_sources = app.db.vector.similarity_sources(sdb, query, nb=10)
+            data['sources'] = similarity_sources_schema.dump(sim_sources)
+            return data
         finally:
             sdb.close()
     
