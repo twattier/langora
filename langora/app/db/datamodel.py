@@ -74,6 +74,8 @@ class Source(Base):
 
     search_sources: Mapped[List["SearchSource"]] = relationship(back_populates="source", order_by='SearchSource.rank')
 
+    source_texts: Mapped[List["SourceText"]] = relationship(back_populates="source", order_by='SourceText.order')
+
     def get_name(self):
         return f'{self.title} [{self.site}]'
 
@@ -81,6 +83,30 @@ class Source(Base):
         return Document(
                 page_content=self.extract, metadata={"source": self.url}
             )
+    
+class SourceText(Base):
+    __tablename__ = "source_text"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True) 
+
+    order: Mapped[int] = mapped_column(String, nullable=False)
+    index: Mapped[int] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=True)
+
+    source_id: Mapped[int] = mapped_column(Integer, ForeignKey(Source.id))
+    source: Mapped["Source"] = relationship(back_populates="source_texts")
+    images: Mapped[List["SourceTextImage"]] = relationship(back_populates="source_text", order_by='SourceTextImage.order')
+
+class SourceTextImage(Base):
+    __tablename__ = "source_text_images"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True) 
+
+    order: Mapped[int] = mapped_column(String, nullable=False)    
+    url: Mapped[str] = mapped_column(String, nullable=False)
+    alt: Mapped[str] = mapped_column(String, nullable=True)
+
+    source_text_id: Mapped[int] = mapped_column(Integer, ForeignKey(SourceText.id))
+    source_text: Mapped["SourceText"] = relationship(back_populates="images")
 
 class SearchSource(Base):
     __tablename__ = "search_source"

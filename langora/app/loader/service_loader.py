@@ -34,11 +34,11 @@ class ServiceLoader(QueueTask):
         loader = None
         if Config.USE_APIFY:           
             print('Loader Apify') 
-            from loader.loader_apify import LoaderApify
+            from loader.loader_web_apify import LoaderApify
             loader = LoaderApify()
         else:
             print('Loader LoaderHtml2Text') 
-            from loader.loader_html2text import LoaderHtml2Text
+            from loader.loader_web_html2text import LoaderHtml2Text
             loader = LoaderHtml2Text()
         self.loader=loader
 
@@ -258,7 +258,7 @@ class ServiceLoader(QueueTask):
                     bar()
                     continue
                 print(f'- Extract : {source.get_name()}')
-                doc = self.loader.load_web(source.url)
+                doc = self.loader.load_document(source.url)
                 if not doc:
                     continue
                 source.extract = doc.page_content

@@ -3,7 +3,7 @@ from langchain_community.utilities import ApifyWrapper
 from loader.loader_web import LoaderWeb, Document
 
 class LoaderApify(LoaderWeb):
-    def load_web(self, url:str)->Document:
+    def load_document(self, url:str)->Document:
         apify = ApifyWrapper()
         loader = apify.call_actor(
             actor_id="apify/website-content-crawler",

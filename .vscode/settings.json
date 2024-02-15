@@ -1,0 +1,5 @@
+{
+    "python.testing.cwd": "${workspaceFolder}/langora/app",
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
