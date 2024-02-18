@@ -22,12 +22,9 @@
 #     app.db.close_session()
 
 
-
-from loader.loader_tree_b4 import LoaderTreeB4
-
-loader = LoaderTreeB4()
-tree = loader.load_tree("https://www.techtarget.com/searchenterpriseai/definition/generative-AI")
-# tree = loader.load_tree("https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai-the-next-productivity-frontier")
-# tree = loader.load_tree("https://www.sciencedirect.com/science/article/pii/S0268401223000233")
-# tree = loader.load_tree("https://www.whitehouse.gov/briefing-room/presidential-actions/2023/10/30/executive-order-on-the-safe-secure-and-trustworthy-development-and-use-of-artificial-intelligence/")
-# tree = loader.load_tree("https://www.gartner.com/en/topics/generative-ai")
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.dialects import postgresql
+from db.datamodel import Source, SourceText, SourceTextImage
+print(CreateTable(Source.__table__).compile(dialect=postgresql.dialect()))
+print(CreateTable(SourceText.__table__).compile(dialect=postgresql.dialect()))
+print(CreateTable(SourceTextImage.__table__).compile(dialect=postgresql.dialect()))

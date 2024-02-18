@@ -9,6 +9,7 @@ from llm.service_model import ServiceModel
 from loader.google_search import google_search
 from task.service_task import ServiceTask, QueueTask, Task
 from utils.functions import get_url_hostname, list_obj_attribute, split_list, list_to_string
+from loader.loader_tree_b4 import LoaderTreeB4    
 
 LOADERS = [STORE.TOPIC, STORE.SEARCH, STORE.SOURCE, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY]
 
@@ -270,10 +271,27 @@ class ServiceLoader(QueueTask):
                     self._chain_task(source.id, STORE.SRC_EXTRACT, up_to_store)
                 bar()
 
+        self.extract_texts(sources)
+
         if up_to_store and not self.is_task_mode:
             self._chain_loader(update_sources, STORE.SRC_EXTRACT, up_to_store)
 
         return update_sources
+    
+    def extract_texts(self, sources:list[Source]):
+        loader = LoaderTreeB4()
+
+        print('Extract Sources Texts :')
+        with alive_bar(len(sources)) as bar:
+            for source in sources:
+                if source.checked_texts:
+                    continue                
+                tree = loader.load_tree(source.url)
+                source.source_texts = tree.create_source_texts()
+                source.date_texts = datetime.now()
+                self.sdb.save()
+                self.vector.store_source_embeddings(self.sdb, source, STORE.SRC_TEXT)
+                bar()
         
     def summarize_sources(self, sources:list[Source])->list[Source]:
         update_sources = []
@@ -320,7 +338,6 @@ class ServiceLoader(QueueTask):
                 self._chain_task(source.id, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY)
         else:
             self._chain_loader(sources, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY)
-
 
     # ---------------------------------------------------------------------------
     # Source

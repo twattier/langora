@@ -1,7 +1,7 @@
 import numbers
 from langchain.vectorstores.pgvector import PGVector
 from sqlalchemy import Engine
-from sqlalchemy import select, text, func, and_
+from sqlalchemy import select, text, func, and_, or_
 from sqlalchemy.orm import Session
 
 from config.env import Config
@@ -16,13 +16,12 @@ class SessionDB():
         #                        autocommit=False,
         #                        join_transaction_mode="create_savepoint"
         #                     )
-        self.session  = Session(self.engine, 
-                                expire_on_commit=False, 
-                                autocommit=False
+        self.session  = Session(bind=self.connection, 
+                                expire_on_commit=False
                                 )
     
     def close(self)->None:
-        self.session.close() 
+        self.session.close()         
         self.connection.close()
 
     # ---------------------------------------------------------------------------
@@ -110,7 +109,7 @@ class SessionDB():
         return self.select_many(stmt)
     
     def select_not_extracted_sources(self)->list[Source]:
-        stmt = select(Source).where(Source.extract == None)
+        stmt = select(Source).where(or_(Source.extract == None, Source.date_texts == None))
         return self.select_many(stmt)
     
     def select_not_summarized_sources(self)->list[Source]:

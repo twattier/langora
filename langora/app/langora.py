@@ -145,6 +145,8 @@ class Langora():
             sources_nb = len(sources)
             sources_extracted_nb = len(list(filter(lambda t: t.extract is not None, sources)))
             sources_extracted_pct = sources_extracted_nb / sources_nb
+            sources_texts_nb = len(list(filter(lambda t: len(t.source_texts)>0, sources)))
+            sources_texts_pct = sources_texts_nb / sources_nb
             sources_summarized_nb = len(list(filter(lambda t: t.summary is not None, sources)))
             sources_summarized_pct = sources_summarized_nb / sources_nb
 
@@ -153,6 +155,7 @@ class Langora():
                 'searches' : {'nb':searches_nb, 'filled_nb' : searches_filled_nb, 'filled_pct' : searches_filled_pct},
                 'sources' : {'nb':sources_nb, 
                                 'extracted_nb' : sources_extracted_nb, 'extracted_pct' : sources_extracted_pct, 
+                                'texts_nb' : sources_texts_nb, 'texts_pct' : sources_texts_pct, 
                                 'summarized_nb' : sources_summarized_nb, 'summarized_pct' : sources_summarized_pct
                             }
             }

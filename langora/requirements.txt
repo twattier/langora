@@ -1,16 +1,18 @@
 python-dotenv
+alive_progress
+#LLM functions
 langchain
+langchain_openai
 langchain_community
 tiktoken
 openai
-langchain_openai
-alive_progress
 #Loader
 google-api-python-client
 playwright
 html2text
 apify-client
 beautifulsoup4
+pillow
 #Database
 psycopg2-binary
 pgvector

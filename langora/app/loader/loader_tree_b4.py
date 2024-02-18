@@ -3,18 +3,15 @@ from bs4 import BeautifulSoup
 import re
 
 from loader.loader_web import DocTree, LoaderWebTree
-from loader.loader_web_html2text import LoaderHtml2Text
+from config.conf_tree_b4 import default_list_content, MIN_IMG_SIZE
+from utils.functions import get_img_sizes
 
 class LoaderTreeB4(LoaderWebTree):
     def __init__(self) -> None:
-        self.loader_web = LoaderHtml2Text()
-
-    def load_html(self, url: str) -> str:
-        return self.loader_web.load_html(url)
+        super().__init__()
     
     def create_tree(self, html:str)->DocTree:
         soup = BeautifulSoup(html, 'html.parser')
-
         root = DocTree()
         level = root
         pattern_header = re.compile("^h[0-9]$")
@@ -47,30 +44,60 @@ class LoaderTreeB4(LoaderWebTree):
             elif tag.name in ['script', 'sup']:
                 skip_next_text=True
 
-        root.clean_text() 
+        root.clean_texts() 
         return root
     
     def start(self, soup:BeautifulSoup):
         start = None
-        if not start:
-            start = soup.find('div', class_=lambda x: x and x.lower().find('container')>=0)
-        if not start:
-            start = soup.find('article')
-        if not start:
-            start = soup.find('div', class_=lambda x: x and x.lower().find('article')>=0)
-        if not start:
-            start = soup.find('div', id=lambda x: x and x.lower().find('content')>=0)
-        if not start:
-            start = soup.find('div', class_=lambda x: x and x.lower().find('content')>=0)                
-        if not start:
-            start = soup.find("body") 
+        selectors = []
+        #use config
+        selector = self.scrapper.get("content") if self.scrapper else None
+        if selector:
+            selectors.append(selector)
+        #default            
+        selectors.extend(default_list_content)
+        for selector in selectors:
+            start = self.find(soup, selector)
+            if start:
+                break
         return start
+    
+    def parse_selector(self, crit):        
+        ta = crit.split('/')
+        tag = ta[0]
+        key = value = None
+        if len(ta)>1:
+            av = ta[1].split('=')
+            key = av[0]
+            value = av[1]
+        return (tag, key, value)
+    
+    def find(self, soup, selector):
+        (tag, key, value) = self.parse_selector(selector)
+        if not key:
+            return soup.find(tag)
+        elif key=='id':
+            res = res = soup.find(tag, id=value)
+            if not res:
+                res = soup.find(tag, id=lambda x: x and x.lower().find('%value')>=0)
+            return res
+        elif key=='class':
+            res = res = soup.find(tag, class_=value)
+            if not res:
+                res = soup.find(tag, class_=lambda x: x and x.lower().find('%value')>=0)
+            return res
+        return soup.find(lambda tag: tag.name=='%tag' and tag.has_attr('%key') and tag['%key'].lower().find('%value')>=0)
     
     def parse_img(self, tag):
         url = tag.get('src')
         if not url:
             url = tag.get('data-src')
-        alt = tag.get('alt')
+        if url:
+            kb, size = get_img_sizes(url)
+            if not size \
+                or (size[0]<MIN_IMG_SIZE and size[1]<MIN_IMG_SIZE):
+                return None, None
+        alt = tag.get('alt')           
         return url, alt
     
     def clean_text(self, txt):

@@ -21,7 +21,7 @@ CONNECTION_STRING = PGVector.connection_string_from_db_params(
 # ---------------------------------------------------------------------------
 # DATAMODEL EMBEDDINGS
 # ---------------------------------------------------------------------------
-STORE = Enum('Store', ['TOPIC', 'SEARCH', 'SOURCE', 'SRC_EXTRACT', 'SRC_SUMMARY'])
+STORE = Enum('Store', ['TOPIC', 'SEARCH', 'SOURCE', 'SRC_EXTRACT', 'SRC_TEXT', 'SRC_SUMMARY'])
 
 class SimilaritySearch():
     def __init__(self, search:Search, score_query:float) -> None:
@@ -82,7 +82,7 @@ class DbVector():
             return        
         self.init_embeddings()
         self.stores = {}
-        for store in [STORE.SEARCH, STORE.SOURCE, STORE.SRC_EXTRACT, STORE.SRC_SUMMARY]:            
+        for store in [STORE.SEARCH, STORE.SOURCE, STORE.SRC_EXTRACT, STORE.SRC_TEXT, STORE.SRC_SUMMARY]:            
             self.stores[store.name] = PGVector(
                             collection_name=store.name,
                             connection_string=CONNECTION_STRING,
@@ -139,15 +139,27 @@ class DbVector():
             self.store_source_embeddings(sdb, source)
         
     def store_source_embeddings(self, sdb:SessionDB, source:Source, type:STORE,
-                                chunk_size=1000)->None:
-        text = None
+                                chunk_size=2000)->None:
+        texts = []
         if type==STORE.SOURCE:
-            text = source.title
+            texts.append(source.title)
         elif type==STORE.SRC_EXTRACT:
-            text = source.extract
+            texts.append(source.extract)
         elif type==STORE.SRC_SUMMARY:
-            text = source.summary
-        if not text:
+            texts.append(source.summary)
+        elif type==STORE.SRC_TEXT:            
+            for src_text in source.source_texts:
+                text = ""
+                if src_text.index==0:
+                    text += f"#{source.title}#" if source.title else ""
+                elif src_text.title:
+                    text += f"\n#{src_text.title}#"
+                if len(src_text.text)>0:
+                    text += "\n" + src_text.text
+                if len(text)>0:
+                    texts.append(text)
+
+        if len(texts)==0:
             return        
         
         #clean_embeddings
@@ -160,15 +172,18 @@ class DbVector():
                 """ % (source.id, type.name)
         sdb.raw_execute(query)
 
-        #Split
-        metadata = {"source_id" : source.id}
-        docs = self._split_text(text, chunk_size)
-        idx = 0
-        for doc in docs:            
-            idx += 1
-            doc.metadata = metadata.copy()
-            if len(docs)>1:
-                doc.metadata['chunk'] = idx        
+        docs = []
+        for text in texts:
+            #Split
+            metadata = {"source_id" : source.id}
+            split_docs = self._split_text(text, chunk_size)
+            idx = 0
+            for doc in split_docs:
+                idx += 1
+                doc.metadata = metadata.copy()
+                if len(split_docs)>1:
+                    doc.metadata['chunk'] = idx
+            docs.extend(split_docs)
 
         #Store
         self.stores[type.name].add_documents(docs)

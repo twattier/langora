@@ -1,6 +1,7 @@
-
 from datetime import datetime
 from dateutil import tz
+import urllib
+from PIL import ImageFile
 
 def list_to_string(list:list, sep=", ")->str:
     txt = ""
@@ -72,3 +73,22 @@ def get_url_hostname(url:str):
     from urllib.parse import urlparse
     parse = urlparse(url)
     return parse.hostname
+
+def get_img_sizes(uri):
+    # get file size *and* image size (None if not known)
+    try:
+        file = urllib.request.urlopen(uri)
+        size = file.headers.get("content-length")
+        if size: size = int(size)
+    except:
+        return None, None
+    p = ImageFile.Parser()
+    while 1:
+        data = file.read(1024)
+        if not data:
+            break
+        p.feed(data)
+        if p.image:
+            return size, p.image.size
+    file.close()
+    return size, None

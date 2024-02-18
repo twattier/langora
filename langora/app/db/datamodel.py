@@ -75,6 +75,8 @@ class Source(Base):
     search_sources: Mapped[List["SearchSource"]] = relationship(back_populates="source", order_by='SearchSource.rank')
 
     source_texts: Mapped[List["SourceText"]] = relationship(back_populates="source", order_by='SourceText.order')
+    date_texts: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    checked_texts:Mapped[bool] = mapped_column(Boolean, default=False)
 
     def get_name(self):
         return f'{self.title} [{self.site}]'
