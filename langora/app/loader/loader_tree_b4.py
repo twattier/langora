@@ -41,7 +41,7 @@ class LoaderTreeB4(LoaderWebTree):
                 level.text += "\n"
             elif tag.name in ['span', 'div']:
                 level.text += " "
-            elif tag.name in ['script', 'sup']:
+            elif tag.name in ['script', 'sup', 'style']:
                 skip_next_text=True
 
         root.clean_texts() 

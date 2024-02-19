@@ -13,6 +13,7 @@ import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 import { ContentBox, ContentBoxTitle } from '../../utils/style/component'
+import SourceTexts from '../Atoms/SourceTexts'
 import { DisplayLines } from '../../utils/display'
 import { useFetchSource } from '../../utils/hooks'
 
@@ -65,6 +66,12 @@ export default function CardSource(props) {
                 </AccordionDetails>
               </Accordion>
             )}
+
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+              Texts
+            </Typography>
+            <Divider />
+            <SourceTexts sourceTexts={source.source_texts} />
 
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
               Summary

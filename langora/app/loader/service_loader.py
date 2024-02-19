@@ -287,7 +287,11 @@ class ServiceLoader(QueueTask):
                 if source.checked_texts:
                     continue                
                 tree = loader.load_tree(source.url)
-                source.source_texts = tree.create_source_texts()
+                if len(source.source_texts)>0:
+                    self.sdb.delete_source_texts(source.id)
+                for text in tree.create_source_texts():
+                    text.source_id = source.id
+                    source.source_texts.append(text)
                 source.date_texts = datetime.now()
                 self.sdb.save()
                 self.vector.store_source_embeddings(self.sdb, source, STORE.SRC_TEXT)

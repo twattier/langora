@@ -1,11 +1,11 @@
 import numbers
 from langchain.vectorstores.pgvector import PGVector
 from sqlalchemy import Engine
-from sqlalchemy import select, text, func, and_, or_
+from sqlalchemy import select, delete, text, func, and_, or_
 from sqlalchemy.orm import Session
 
 from config.env import Config
-from db.datamodel import Base, Topic, Knowledge, Search, Source, SearchSource
+from db.datamodel import Base, Topic, Knowledge, Search, Source, SearchSource, SourceText
 
 class SessionDB():
     def __init__(self, engine:Engine)->None:
@@ -22,7 +22,9 @@ class SessionDB():
     
     def close(self)->None:
         self.session.close()         
+        self.session = None
         self.connection.close()
+        self.connection = None
 
     # ---------------------------------------------------------------------------
     # ORM
@@ -117,6 +119,10 @@ class SessionDB():
             and_(Source.extract != None, Source.summary == None)
             )
         return self.select_many(stmt)
+    
+    def delete_source_texts(self, source_id):
+        stmt = delete(SourceText).where(SourceText.source_id==source_id)
+        self.session.execute(stmt)
 
     # ---------------------------------------------------------------------------
     # Create Database
@@ -173,7 +179,12 @@ class SessionDB():
           
         print("Commit : new objects  : {} , updated objects : {}, deleted objects : {}"
               .format(nb_new, nb_update, nb_delete))        
-        self.session.commit()
+        try:
+            self.session.commit()
+        except:
+            print("Error : Rollback")
+            self.session.rollback()  
+            raise
 
     def raw_execute(self, query:str)->None:
         try:
@@ -184,5 +195,8 @@ class SessionDB():
             connection.commit()            
         except:
             print("SQL Execute Error : " + query)
+            self.session.rollback()  
+            raise
         finally:
             cursor.close()
+            connection.close()

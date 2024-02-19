@@ -117,11 +117,11 @@ class DocTree():
             txt = txt.replace('  ', ' ')         
         return txt
     
-    def create_source_texts(self)->list[SourceText]:
+    def create_source_texts(self, index=0)->list[SourceText]:
         list = []
         st = SourceText(
             order = self.order,
-            index = self.index,
+            index = index,
             title = self.title,
             text = self.text
         )
@@ -136,7 +136,7 @@ class DocTree():
             st.images.append(sti)
         list.append(st)
         for child in self.childs:
-            list.extend(child.create_source_texts())
+            list.extend(child.create_source_texts(index=index+1))
         return list
     
 class LoaderWebTree(LoaderWeb):

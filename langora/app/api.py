@@ -7,7 +7,7 @@ from marshmallow import Schema, fields
 
 
 from config.env import Config
-from db.datamodel import Knowledge, Topic, Search, Source, SearchSource
+from db.datamodel import Knowledge, Topic, Search, Source, SearchSource, SourceText, SourceTextImage
 from task.service_task import SEARCH_STATUS
 from langora import Langora
 from db.dbvector import STORE
@@ -77,6 +77,24 @@ class SourceSearchSchema(ma.SQLAlchemySchema):
     date_created = ma.auto_field()
     search = Nested(SearchShortSchema)
 
+class SourceTextImageSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = SourceTextImage
+    id = ma.auto_field()
+    order = ma.auto_field()
+    url = ma.auto_field()
+    alt = ma.auto_field()    
+
+class SourceTextSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = SourceText
+    id = ma.auto_field()
+    order = ma.auto_field()
+    index = ma.auto_field()
+    title = ma.auto_field()
+    text = ma.auto_field()
+    images = Nested(SourceTextImageSchema, many=True)
+
 class SourceSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Source
@@ -89,6 +107,7 @@ class SourceSchema(ma.SQLAlchemySchema):
     date_extract = ma.auto_field()
     summary = ma.auto_field()
     date_summary = ma.auto_field()
+    source_texts = Nested(SourceTextSchema, many=True)   
     search_sources = Nested(SourceSearchSchema, many=True)   
 source_schema = SourceSchema()
 
