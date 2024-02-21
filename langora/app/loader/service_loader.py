@@ -288,7 +288,7 @@ class ServiceLoader(QueueTask):
                     continue                
                 tree = loader.load_tree(source.url)
                 if len(source.source_texts)>0:
-                    self.sdb.delete_source_texts(source.id)
+                    self.sdb.delete_all_source_texts(source.id)
                 for text in tree.create_source_texts():
                     text.source_id = source.id
                     source.source_texts.append(text)
@@ -296,6 +296,21 @@ class ServiceLoader(QueueTask):
                 self.sdb.save()
                 self.vector.store_source_embeddings(self.sdb, source, STORE.SRC_TEXT)
                 bar()
+
+    def update_texts(self, source_id:int, changes:dict):
+        for del_st in changes['deleted']:
+            self.sdb.delete_source_text(del_st)
+        for upd_st in changes['updated']:
+            st = self.sdb.select_source_text(upd_st['id'])
+            upd_title = upd_st.get('title')
+            if upd_title:
+                st.title = upd_title
+            upd_text = upd_st.get('text')
+            if upd_text:
+                st.text = upd_text
+        self.sdb.save()
+        src = self.sdb.select_source_by_id(source_id)
+        self.vector.store_source_embeddings(self.sdb, src, STORE.SRC_TEXT)
         
     def summarize_sources(self, sources:list[Source])->list[Source]:
         update_sources = []

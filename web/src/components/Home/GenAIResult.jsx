@@ -17,7 +17,7 @@ export default function GenAIResult(props) {
         <Box
           sx={{ width: '100%', p: 1, borderRadius: 2, bgcolor: 'white' }}
         >
-          <DisplayLines text={resultGenAI.response} />
+          <DisplayLines text={resultGenAI.response} variant='body2'/>
         </Box>
         <Stack spacing={1}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>

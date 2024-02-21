@@ -38,11 +38,12 @@ class LoaderTreeB4(LoaderWebTree):
                 if (not self.is_empty(tag.text)) and (not tag.find('p')):
                     level.text += "\n - "
             elif tag.name in ['p']:
-                level.text += "\n"
-            elif tag.name in ['span', 'div']:
-                level.text += " "
+                level.text += "\n"            
             elif tag.name in ['script', 'sup', 'style']:
                 skip_next_text=True
+            # elif tag.name in ['span', 'div', 'a']:
+            else:
+                level.text += " "
 
         root.clean_texts() 
         return root

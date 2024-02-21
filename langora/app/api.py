@@ -353,6 +353,18 @@ class Source(Resource):
         finally:
             sdb.close()
 
+@ns_sources.route('/<source_id>/sourcetexts', methods=['POST'])
+class SourceTexts(Resource):
+    @ns_sources.doc('Update SourceTexts')
+    def post(self, source_id):
+        global app
+        try:
+            loader = app.create_loader()
+            changes = request.json            
+            loader.update_texts(source_id, changes)
+        finally:
+            loader.sdb.close()
+
 @ns_sources.route('/similarities', methods=['GET'])
 @ns_sources.param('query', 'Query for similarity research')
 class SearchesSimilarities(Resource):

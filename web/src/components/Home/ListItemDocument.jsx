@@ -30,9 +30,7 @@ export default function ListItemDocument(props) {
             <Typography variant="caption">
               [{document.doc_type} - Chunk : {document.doc_chunk}]
             </Typography>
-            <Typography variant="body2">
-              <DisplayLines text={document.doc_text} />
-            </Typography>
+            <DisplayLines text={document.doc_text} variant="body2" />
           </Box>
         </AccordionDetails>
       </Accordion>

@@ -120,9 +120,15 @@ class SessionDB():
             )
         return self.select_many(stmt)
     
-    def delete_source_texts(self, source_id):
+    def delete_all_source_texts(self, source_id):
         stmt = delete(SourceText).where(SourceText.source_id==source_id)
         self.session.execute(stmt)
+    def delete_source_text(self, source_text_id):
+        stmt = delete(SourceText).where(SourceText.id==source_text_id)
+        self.session.execute(stmt)
+    def select_source_text(self, source_text_id):
+        stmt = select(SourceText).where(SourceText.id==source_text_id)
+        return self.select_one(stmt)
 
     # ---------------------------------------------------------------------------
     # Create Database

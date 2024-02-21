@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "cwd": "${workspaceFolder}/langora/app", // set directory here
-            "program": "test.py",
+            "program": "api.py",
             "args": ["update", "-l", "summary"],
             "console": "integratedTerminal",
             "justMyCode": true

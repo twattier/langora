@@ -4,8 +4,6 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
-import List from '@mui/material/List'
-import ListItemButton from '@mui/material/ListItemButton'
 import Link from '@mui/material/Link'
 import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
@@ -60,9 +58,7 @@ export default function CardSource(props) {
                   </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2">
-                    <DisplayLines text={source.extract} />
-                  </Typography>
+                  <DisplayLines text={source.extract} variant="body2"/>
                 </AccordionDetails>
               </Accordion>
             )}
@@ -71,7 +67,7 @@ export default function CardSource(props) {
               Texts
             </Typography>
             <Divider />
-            <SourceTexts sourceTexts={source.source_texts} />
+            <SourceTexts sourceId={sourceId} sourceTexts={source.source_texts} />
 
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
               Summary
@@ -89,9 +85,7 @@ export default function CardSource(props) {
                   </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2">
-                    <DisplayLines text={source.summary} />
-                  </Typography>
+                  <DisplayLines text={source.summary} variant="body2" />
                 </AccordionDetails>
               </Accordion>
             )}

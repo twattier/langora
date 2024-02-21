@@ -15,7 +15,8 @@ test_url = [
     ("https://www.forbes.com/sites/zendesk/2023/08/09/3-areas-customers-see-the-most-potential-for-generative-ai/", [2]),
     ("https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai-the-next-productivity-frontier", 18),
     ("https://medium.com/swlh/a-practical-guide-to-ai-product-management-part-1-5b629da25131", [5]),
-    ("https://www.eweek.com/artificial-intelligence/generative-ai-enterprise-use-cases/", [4])
+    ("https://www.eweek.com/artificial-intelligence/generative-ai-enterprise-use-cases/", [4]),
+    ("https://mitsloan.mit.edu/ideas-made-to-matter/machine-learning-explained", [0, 7]),
 ]
 @pytest.mark.parametrize("url,expect", test_url)
 def test_loader_tree_childs(url, expect):

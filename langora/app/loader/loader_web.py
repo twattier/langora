@@ -134,7 +134,8 @@ class DocTree():
                 alt=img[1]
             )
             st.images.append(sti)
-        list.append(st)
+        if self.text!="":
+            list.append(st)
         for child in self.childs:
             list.extend(child.create_source_texts(index=index+1))
         return list

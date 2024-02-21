@@ -90,9 +90,11 @@ class SourceText(Base):
     __tablename__ = "source_text"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True) 
 
-    order: Mapped[int] = mapped_column(String, nullable=False)
-    index: Mapped[int] = mapped_column(String, nullable=False)
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
+    index: Mapped[int] = mapped_column(Integer, nullable=False)    
     title: Mapped[str] = mapped_column(String, nullable=True)
+    tree_ids: Mapped[str] = mapped_column(String, nullable=True)
+    tree_title: Mapped[str] = mapped_column(String, nullable=True)
     text: Mapped[str] = mapped_column(Text, nullable=True)
 
     source_id: Mapped[int] = mapped_column(Integer, ForeignKey(Source.id))
@@ -103,7 +105,7 @@ class SourceTextImage(Base):
     __tablename__ = "source_text_images"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True) 
 
-    order: Mapped[int] = mapped_column(String, nullable=False)    
+    order: Mapped[int] = mapped_column(Integer, nullable=False)    
     url: Mapped[str] = mapped_column(String, nullable=False)
     alt: Mapped[str] = mapped_column(String, nullable=True)
 
