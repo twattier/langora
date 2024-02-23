@@ -1,7 +1,14 @@
-# from langora import Langora
-# from db.dbvector import STORE
+from langora import Langora
+from db.dbvector import STORE
 
-# app = Langora(is_task_mode=True)
+app = Langora(is_task_mode=False)
+try:
+    sdb = app.create_session()
+    sdb.vector.update_sources_embeddings()
+finally:
+    sdb.close()
+
+
 # try:
 #     # agent = "an expert in artificial intelligence consulting for businesses"
 #     # topics = ["Generative AI", "Large language model", "Generative AI business use cases", "Generative AI development methodology"]
@@ -22,9 +29,9 @@
 #     app.db.close_session()
 
 
-from sqlalchemy.schema import CreateTable
-from sqlalchemy.dialects import postgresql
-from db.datamodel import Source, SourceText, SourceTextImage
-print(CreateTable(Source.__table__).compile(dialect=postgresql.dialect()))
-print(CreateTable(SourceText.__table__).compile(dialect=postgresql.dialect()))
-print(CreateTable(SourceTextImage.__table__).compile(dialect=postgresql.dialect()))
+# from sqlalchemy.schema import CreateTable
+# from sqlalchemy.dialects import postgresql
+# from db.datamodel import Source, SourceText, SourceTextImage
+# print(CreateTable(Source.__table__).compile(dialect=postgresql.dialect()))
+# print(CreateTable(SourceText.__table__).compile(dialect=postgresql.dialect()))
+# print(CreateTable(SourceTextImage.__table__).compile(dialect=postgresql.dialect()))

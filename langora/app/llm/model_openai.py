@@ -7,4 +7,5 @@ class ModelOpenAI(Model):
         Model.__init__(self)
 
     def init_model(self):
-        self.llm = OpenAI()
+        self.llm = OpenAI(max_tokens=-1)
+        # model='gpt-3.5-turbo-16k', 

@@ -43,28 +43,7 @@ export default function CardSource(props) {
             </Box>
 
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              Extract
-            </Typography>
-            <Divider />
-            {source?.extract === undefined ? (
-              <Box>Scan Source</Box>
-            ) : (
-              <Accordion slotProps={{ transition: { unmountOnExit: true } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ mr: 2 }}>
-                    {source.extract.length < maxText
-                      ? source.extract
-                      : source.extract.substr(0, maxText - 3) + '...'}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <DisplayLines text={source.extract} variant="body2"/>
-                </AccordionDetails>
-              </Accordion>
-            )}
-
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              Texts
+            Extract
             </Typography>
             <Divider />
             <SourceTexts sourceId={sourceId} sourceTexts={source.source_texts} />

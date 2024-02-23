@@ -17,12 +17,10 @@ class ServiceLoader(QueueTask):
 
     def __init__(self, 
                  sdb:SessionDB,
-                 vector:DbVector,
                  model:ServiceModel,                 
                  tasks:ServiceTask) -> None:
         super().__init__(tasks)
         self.sdb = sdb
-        self.vector = vector
         self.model = model        
         self.tasks = tasks
         self.is_task_mode = False
@@ -54,7 +52,7 @@ class ServiceLoader(QueueTask):
     # Import chain
     # ---------------------------------------------------------------------------
     
-    def _chain_loader(self, inputs:list, from_store:STORE, to_store:STORE)->list:        
+    def _chain_loader(self, inputs:list, from_store, to_store)->list:        
         list = inputs
         for store in LOADERS:
             if store.value<=from_store.value:
@@ -76,7 +74,7 @@ class ServiceLoader(QueueTask):
                 list = self.summarize_sources(list)
         return list
     
-    def _chain_task(self, input, from_store:STORE, to_store:STORE):
+    def _chain_task(self, input, from_store, to_store):
         if not to_store:
             return
         if from_store == STORE.TOPIC:            
@@ -95,13 +93,12 @@ class ServiceLoader(QueueTask):
     # ---------------------------------------------------------------------------
     # knowledge
 
-    def init_knowledge(self, agent:str, names:list[str], up_to_store:STORE)->None:
-        """Create the database 
+    def init_knowledge(self, agent:str, names:list[str], up_to_store)->None:
+        """Initialize the database 
             + Create the Knowledge object
             + Add recommended search + recommended topic
             + (optional create source -> extract -> summarized them)
-        """
-        self.sdb.recreate_database()        
+        """        
         knowledge = Knowledge(agent=agent)
         self.sdb.add(knowledge)
         self.sdb.save()
@@ -111,7 +108,7 @@ class ServiceLoader(QueueTask):
     # ---------------------------------------------------------------------------
     # Topics
         
-    def add_topics(self, names:list[str], up_to_store:STORE)->list[Topic]:        
+    def add_topics(self, names:list[str], up_to_store)->list[Topic]:        
         print('Add topics :')
         new_topics = []
         for name in names:            
@@ -130,12 +127,12 @@ class ServiceLoader(QueueTask):
 
         # print('Embeddings topics')
         # for topic in new_topics:
-        #     self.vector.store_topic_embeddings(self.sdb, topic) #TODO manage list
+        #     self.sdb.vector.store_topic_embeddings(topic) #TODO manage list
 
         self.update_topics(new_topics, up_to_store=up_to_store)
         return new_topics
     
-    def update_topics(self, topics:list[Topic], up_to_store:STORE)->list[Topic]:
+    def update_topics(self, topics:list[Topic], up_to_store)->list[Topic]:
         if self.is_task_mode:
             self._chain_task(list_obj_attribute(topics, 'id'), STORE.TOPIC, up_to_store)
         elif up_to_store:
@@ -145,7 +142,7 @@ class ServiceLoader(QueueTask):
     # Search
 
     def add_searches_recommended(self, topics:list[Topic]
-                                 , up_to_store:STORE=None)->list[Search]:        
+                                 , up_to_store=None)->list[Search]:        
         print(f'Add searches recommended')
         searches = []
         with alive_bar(len(topics)) as bar:
@@ -161,7 +158,7 @@ class ServiceLoader(QueueTask):
         return searches
 
     def add_searches(self, queries:list[str], topic:Topic=None
-                     , up_to_store:STORE=None)->list[Search]:
+                     , up_to_store=None)->list[Search]:
         print(f'Add searches :')
         new_searches = []               
         for query in queries:
@@ -183,12 +180,12 @@ class ServiceLoader(QueueTask):
 
         print('Embeddings searches')
         for search in new_searches:
-            self.vector.store_search_embeddings(self.sdb, search) #TODO manage list
+            self.sdb.vector.store_search_embeddings(search) #TODO manage list
 
         self.update_searches(new_searches, up_to_store=up_to_store)
         return new_searches
     
-    def update_searches(self, searches:list[Search], up_to_store:STORE=None):
+    def update_searches(self, searches:list[Search], up_to_store=None):
         if self.is_task_mode:
             for split in split_list(searches, 10):
                 self._chain_task(list_obj_attribute(split, 'id'), STORE.SEARCH, up_to_store)
@@ -199,7 +196,7 @@ class ServiceLoader(QueueTask):
     # Source
 
     def add_sources(self, searches:list[Search]
-                    , up_to_store:STORE=None)->list[Source]:
+                    , up_to_store=None)->list[Source]:
         print(f'Add sources : ')
         new_sources = []
         with alive_bar(len(searches)) as bar:
@@ -238,7 +235,7 @@ class ServiceLoader(QueueTask):
 
         print('Embeddings sources')
         for source in new_sources:
-            self.vector.store_source_embeddings(self.sdb, source, STORE.SOURCE)
+            self.sdb.vector.store_source_embeddings(source, STORE.SOURCE)
 
         if up_to_store and not self.is_task_mode:
             self._chain_loader(new_sources, STORE.SOURCE, up_to_store)
@@ -246,46 +243,20 @@ class ServiceLoader(QueueTask):
         return new_sources
 
     def extract_sources(self, sources:list[Source]
-                        , up_to_store:STORE=None)->list[Source]:
+                        , up_to_store=None)->list[Source]:
         update_sources = []
         nb = len(sources)
         if nb == 0:
             return update_sources
         print('Extract Sources :')
+        loader = LoaderTreeB4()
         with alive_bar(nb) as bar:
             for source in sources:
-                if source.extract:
+                if source.checked_texts:
                     print(f'- Skip : {source.get_name()}')
                     bar()
                     continue
                 print(f'- Extract : {source.get_name()}')
-                doc = self.loader.load_document(source.url)
-                if not doc:
-                    continue
-                source.extract = doc.page_content
-                source.date_extract = datetime.now()                
-                update_sources.append(source)
-                self.sdb.save()
-                self.vector.store_source_embeddings(self.sdb, source, STORE.SRC_EXTRACT)
-                if self.is_task_mode:                            
-                    self._chain_task(source.id, STORE.SRC_EXTRACT, up_to_store)
-                bar()
-
-        self.extract_texts(sources)
-
-        if up_to_store and not self.is_task_mode:
-            self._chain_loader(update_sources, STORE.SRC_EXTRACT, up_to_store)
-
-        return update_sources
-    
-    def extract_texts(self, sources:list[Source]):
-        loader = LoaderTreeB4()
-
-        print('Extract Sources Texts :')
-        with alive_bar(len(sources)) as bar:
-            for source in sources:
-                if source.checked_texts:
-                    continue                
                 tree = loader.load_tree(source.url)
                 if len(source.source_texts)>0:
                     self.sdb.delete_all_source_texts(source.id)
@@ -293,9 +264,17 @@ class ServiceLoader(QueueTask):
                     text.source_id = source.id
                     source.source_texts.append(text)
                 source.date_texts = datetime.now()
+                update_sources.append(source)
                 self.sdb.save()
-                self.vector.store_source_embeddings(self.sdb, source, STORE.SRC_TEXT)
+                self.sdb.vector.store_source_embeddings(source, STORE.SRC_TEXT)
+                if self.is_task_mode:                            
+                    self._chain_task(source.id, STORE.SRC_EXTRACT, up_to_store)
                 bar()
+                
+        if up_to_store and not self.is_task_mode:
+            self._chain_loader(update_sources, STORE.SRC_EXTRACT, up_to_store)
+
+        return update_sources
 
     def update_texts(self, source_id:int, changes:dict):
         for del_st in changes['deleted']:
@@ -310,7 +289,7 @@ class ServiceLoader(QueueTask):
                 st.text = upd_text
         self.sdb.save()
         src = self.sdb.select_source_by_id(source_id)
-        self.vector.store_source_embeddings(self.sdb, src, STORE.SRC_TEXT)
+        self.sdb.vector.store_source_embeddings(src, STORE.SRC_TEXT)
         
     def summarize_sources(self, sources:list[Source])->list[Source]:
         update_sources = []
@@ -325,20 +304,21 @@ class ServiceLoader(QueueTask):
                     bar()
                     continue
                 print(f'- Summary : {source.get_name()}')
+                #TODO review summary
                 # try:
-                doc = source.document_extract()
-                source.summary = self.model.summarize(doc)
-                source.date_summary = datetime.now()      
-                update_sources.append(source)              
-                self.sdb.save()
-                self.vector.store_source_embeddings(self.sdb, source, STORE.SRC_SUMMARY)
+                # doc = source.document_extract()
+                # source.summary = self.model.summarize(doc)
+                # source.date_summary = datetime.now()      
+                # update_sources.append(source)              
+                # self.sdb.save()
+                # self.sdb.vector.store_source_embeddings(source, STORE.SRC_SUMMARY)
                 # except Exception as error:
                 #     print("An error occurred:", error)
                 bar()
         return update_sources
     
     def update_extract_sources(self
-                       , up_to_store:STORE=STORE.SRC_EXTRACT)->list[Source]:        
+                       , up_to_store=STORE.SRC_EXTRACT)->list[Source]:        
         sources = self.sdb.select_not_extracted_sources()
         if len(sources)==0: 
             return
@@ -360,7 +340,7 @@ class ServiceLoader(QueueTask):
 
     # ---------------------------------------------------------------------------
     # Source
-    def list_tasks(self, status:str, store:STORE=None)->list[Task]:
+    def list_tasks(self, status:str, store=None)->list[Task]:
         if store:
             tasks = self.tasks.list_queue_tasks_status(f'{Config.REDIS_QUEUE}-{store.name}', status)
         else:

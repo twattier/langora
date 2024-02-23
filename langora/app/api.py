@@ -102,9 +102,7 @@ class SourceSchema(ma.SQLAlchemySchema):
     url = ma.auto_field()
     site = ma.auto_field()
     title = ma.auto_field()
-    snippet = ma.auto_field()
-    extract = ma.auto_field()
-    date_extract = ma.auto_field()
+    snippet = ma.auto_field()    
     summary = ma.auto_field()
     date_summary = ma.auto_field()
     source_texts = Nested(SourceTextSchema, many=True)   
@@ -165,8 +163,9 @@ class SimilaritySourceSchema(Schema):
     doc_score = fields.Float()
     doc_type = fields.Str()
     doc_chunk = fields.Int()
-    doc_text = fields.Str()
+    # doc_text = fields.Str()
     source = Nested(SourceShortSchema)
+    source_text = Nested(SourceTextSchema)
 similarity_source_schema = SimilaritySourceSchema()
 similarity_sources_schema = SimilaritySourceSchema(many=True)
 
@@ -209,9 +208,9 @@ class SourceSimilarities(Resource):
             
             data = {}
             data['query'] = query
-            sim_sources = app.db.vector.similarity_sources(sdb, query)
+            sim_sources = sdb.vector.similarity_sources(query)
             data['sources'] = similarity_sources_schema.dump(sim_sources)
-            sim_searches = app.db.vector.similarity_searches(sdb, query)
+            sim_searches = sdb.vector.similarity_searches(query)
             data['searches'] = similarity_searches_schema.dump(sim_searches)            
             return data
         finally:
@@ -320,7 +319,7 @@ class SearchesSimilarities(Resource):
             
             data = {}
             data['query'] = query        
-            sim_searches = app.db.vector.similarity_searches(sdb, query, nb=10)
+            sim_searches = sdb.vector.similarity_searches(query, nb=10)
             data['searches'] = similarity_searches_schema.dump(sim_searches)            
             return data
         finally:
@@ -377,7 +376,7 @@ class SearchesSimilarities(Resource):
             
             data = {}
             data['query'] = query        
-            sim_sources = app.db.vector.similarity_sources(sdb, query, nb=10)
+            sim_sources = sdb.vector.similarity_sources(query, nb=10)
             data['sources'] = similarity_sources_schema.dump(sim_sources)
             return data
         finally:

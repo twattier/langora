@@ -23,7 +23,7 @@ class Langora():
     def create_loader(self, sdb:SessionDB=None)->ServiceLoader:
         if not sdb:
             sdb = self.create_session()
-        loader = ServiceLoader(sdb, self.db.vector, self.model, self.tasks)
+        loader = ServiceLoader(sdb, self.model, self.tasks)
         if self.is_task_mode:
             loader.init_tasks()
         return loader
@@ -35,6 +35,8 @@ class Langora():
     def install_db_knowledge(self, agent:str, topics:list[str],
                             up_to_store=STORE.SOURCE):
         try:
+            self.db.recreate_database()
+            
             loader = self.create_loader()
             loader.init_knowledge(agent, topics, up_to_store)
         finally:
@@ -142,9 +144,7 @@ class Langora():
             searches_filled_pct = searches_filled_nb / searches_nb
 
             sources = sdb.select_sources()
-            sources_nb = len(sources)
-            sources_extracted_nb = len(list(filter(lambda t: t.extract is not None, sources)))
-            sources_extracted_pct = sources_extracted_nb / sources_nb
+            sources_nb = len(sources)            
             sources_texts_nb = len(list(filter(lambda t: len(t.source_texts)>0, sources)))
             sources_texts_pct = sources_texts_nb / sources_nb
             sources_summarized_nb = len(list(filter(lambda t: t.summary is not None, sources)))
@@ -153,8 +153,7 @@ class Langora():
             return {
                 'topics' : {'nb':topics_nb, 'filled_nb' : topics_filled_nb, 'filled_pct' : topics_filled_pct},
                 'searches' : {'nb':searches_nb, 'filled_nb' : searches_filled_nb, 'filled_pct' : searches_filled_pct},
-                'sources' : {'nb':sources_nb, 
-                                'extracted_nb' : sources_extracted_nb, 'extracted_pct' : sources_extracted_pct, 
+                'sources' : {'nb':sources_nb,                                 
                                 'texts_nb' : sources_texts_nb, 'texts_pct' : sources_texts_pct, 
                                 'summarized_nb' : sources_summarized_nb, 'summarized_pct' : sources_summarized_pct
                             }
@@ -162,12 +161,12 @@ class Langora():
         finally:
             sdb.close()
     
-    def genAI(self, sdb:SessionDB, query, nb_extract=3, nb_ref=5):        
+    def genAI(self, sdb:SessionDB, query, nb_extract=10, nb_ref=10):
 
-        sim_docs, sim_sources = self.db.vector.similarity_sources_extract(sdb, query, nb=nb_extract)
+        sim_docs, sim_sources = sdb.vector.similarity_sources_extract(query, nb=nb_extract)
         if len(sim_sources)>nb_ref:
             sim_sources = sim_sources[:nb_ref]
-        sim_searches = self.db.vector.similarity_searches(sdb, query)
+        sim_searches = sdb.vector.similarity_searches(query)
         docs = []
         for ss in sim_docs:
             docs.append(Document(page_content=ss.doc_text))

@@ -6,10 +6,10 @@
     "configurations": [
         {
             "name": "Python: test",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "cwd": "${workspaceFolder}/langora/app", // set directory here
-            "program": "api.py",
+            "program": "test.py",
             "args": ["update", "-l", "summary"],
             "console": "integratedTerminal",
             "justMyCode": true

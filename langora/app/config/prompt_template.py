@@ -1,4 +1,6 @@
 
+MIN_SRC_TEXT = 500
+
 #Generate query for google search
 searches_recommended = """
     As {agent}

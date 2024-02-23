@@ -1,13 +1,13 @@
 from enum import Enum
 from copy import deepcopy
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain.vectorstores.pgvector import PGVector
+from langchain_core.embeddings import Embeddings
 
 from config.env import Config
-from db.session_db import SessionDB
-from db.datamodel import Base, Topic, Knowledge, Search, Source, SearchSource
+from config.prompt_template import MIN_SRC_TEXT
+from db.datamodel import Base, Topic, Knowledge, Search, Source, SearchSource, SourceText
 
 CONNECTION_STRING = PGVector.connection_string_from_db_params(
     driver="psycopg2",
@@ -31,13 +31,14 @@ class SimilaritySearch():
 class SimilaritySource():
     def __init__(self, source:Source) -> None:
         self.source = source
-        self.scores:dict[STORE, float] = {}
+        self.scores:dict[Enum, float] = {}
         self.doc_score:float = None
         self.doc_type:str = None
         self.doc_chunk:int = None
         self.doc_text:str = None
+        self.source_text:SourceText = None
     
-    def set_score_src(self, store:STORE, value:float):
+    def set_score_src(self, store:Enum, value:float):
         prev = self.scores.get(store)
         if prev and prev>value:
             return
@@ -67,25 +68,20 @@ class SimilaritySource():
 # ---------------------------------------------------------------------------
 class DbVector():
     
-    def __init__(self)->None:        
-        self.embeddings = None
+    def __init__(self, sdb, embeddings:Embeddings)->None:        
+        self.sdb = sdb
+        self.embeddings = embeddings
         self.stores = None
-
-    def init_embeddings(self):
-        if self.embeddings:
-            return
-        print("Load model embeddings : " + Config.MODEL_EMBEDDINGS)
-        self.embeddings = HuggingFaceEmbeddings(model_name = Config.MODEL_EMBEDDINGS, cache_folder=Config.HUGGINGFACE_CACHE)
 
     def init_stores(self)->None:
         if self.stores:
-            return        
-        self.init_embeddings()
+            return                
         self.stores = {}
         for store in [STORE.SEARCH, STORE.SOURCE, STORE.SRC_EXTRACT, STORE.SRC_TEXT, STORE.SRC_SUMMARY]:            
             self.stores[store.name] = PGVector(
                             collection_name=store.name,
-                            connection_string=CONNECTION_STRING,
+                            connection_string="",
+                            connection = self.sdb.connection,
                             embedding_function=self.embeddings,
                             )
 
@@ -96,14 +92,14 @@ class DbVector():
     # ---------------------------------------------------------------------------
     # Topic
         
-    def store_topic_embeddings(self, sdb:SessionDB, topic:Topic)->None:
+    def store_topic_embeddings(self, topic:Topic)->None:
         #clean_embeddings
         query = """
                 DELETE
                 FROM langchain_pg_embedding
                 WHERE CAST(cmetadata->>'topic_id' as integer) = %s
                 """ % (topic.id)
-        sdb.raw_execute(query)
+        self.sdb.execute_sql(query)
         
         doc = Document(
                 page_content=topic.name, metadata={"topic_id": topic.id}
@@ -113,18 +109,18 @@ class DbVector():
     # ---------------------------------------------------------------------------
     # Search
         
-    def update_search_embeddings(self, sdb:SessionDB):
-        for search in sdb.select_searches():
-            self.store_search_embeddings(sdb, search)
+    def update_search_embeddings(self):
+        for search in self.sdb.select_searches():
+            self.store_search_embeddings(search)
         
-    def store_search_embeddings(self, sdb:SessionDB, search:Search)->None:
+    def store_search_embeddings(self, search:Search)->None:
         #clean_embeddings
         query = """
                 DELETE
                 FROM langchain_pg_embedding
                 WHERE CAST(cmetadata->>'search_id' as integer) = %s
                 """ % (search.id)
-        sdb.raw_execute(query)
+        self.sdb.execute_sql(query)
         
         doc = Document(
                 page_content=search.query, metadata={"search_id": search.id}
@@ -134,33 +130,23 @@ class DbVector():
     # ---------------------------------------------------------------------------
     # Sources
         
-    def update_sources_embeddings(self, sdb:SessionDB):
-        for source in sdb.select_sources():
-            self.store_source_embeddings(sdb, source)
+    def update_sources_embeddings(self):        
+        for source in self.sdb.select_sources():
+            self.store_source_embeddings(source, STORE.SOURCE)
+            self.store_source_embeddings(source, STORE.SRC_SUMMARY)
+            self.store_source_text_embeddings(source)
+            self.sdb.session.flush()
         
-    def store_source_embeddings(self, sdb:SessionDB, source:Source, type:STORE,
+    def store_source_embeddings(self, source:Source, type:Enum,
                                 chunk_size=2000)->None:
-        texts = []
+        text = ""
         if type==STORE.SOURCE:
-            texts.append(source.title)
-        elif type==STORE.SRC_EXTRACT:
-            texts.append(source.extract)
+            text = source.title
         elif type==STORE.SRC_SUMMARY:
-            texts.append(source.summary)
-        elif type==STORE.SRC_TEXT:            
-            for src_text in source.source_texts:
-                text = ""
-                if src_text.index==0:
-                    text += f"#{source.title}#" if source.title else ""
-                elif src_text.title:
-                    text += f"\n#{src_text.title}#"
-                if len(src_text.text)>0:
-                    text += "\n" + src_text.text
-                if len(text)>0:
-                    texts.append(text)
-
-        if len(texts)==0:
-            return        
+            text = source.summary
+        
+        if not text or text == "":
+            return
         
         #clean_embeddings
         query = """
@@ -170,13 +156,46 @@ class DbVector():
                 and collection_id in
                     (select uuid from langchain_pg_collection where name = '%s')
                 """ % (source.id, type.name)
-        sdb.raw_execute(query)
+        self.sdb.execute_sql(query)
+        
+        #Split
+        metadata = {"source_id" : source.id}
+        split_docs = self._split_text(text, chunk_size)
+        idx = 0
+        for doc in split_docs:
+            idx += 1
+            doc.metadata = metadata.copy()
+            if len(split_docs)>1:
+                doc.metadata['chunk'] = idx
+
+        #Store
+        self.stores[type.name].add_documents(split_docs)
+
+    def store_source_text_embeddings(self, source:Source,
+                                     chunk_size=2000)->None:
+        
+        #clean_embeddings
+        query = """
+                DELETE
+                FROM langchain_pg_embedding
+                WHERE CAST(cmetadata->>'source_id' as integer) = %s
+                and collection_id in
+                    (select uuid from langchain_pg_collection where name = '%s')
+                """ % (source.id, STORE.SRC_TEXT.name)
+        self.sdb.execute_sql(query)
 
         docs = []
-        for text in texts:
+        for src_text in source.source_texts:       
+            if len(src_text.text)<MIN_SRC_TEXT:
+                continue
             #Split
-            metadata = {"source_id" : source.id}
-            split_docs = self._split_text(text, chunk_size)
+            metadata = {
+                "source_id" : source.id,
+                "source_text_id" : src_text.id,                
+                }
+            if src_text.title:
+                metadata["title"] = src_text.title
+            split_docs = self._split_text(src_text.text, chunk_size)
             idx = 0
             for doc in split_docs:
                 idx += 1
@@ -186,7 +205,7 @@ class DbVector():
             docs.extend(split_docs)
 
         #Store
-        self.stores[type.name].add_documents(docs)
+        self.stores[STORE.SRC_TEXT.name].add_documents(docs)
 
     # ---------------------------------------------------------------------------
     # Utils
@@ -201,11 +220,11 @@ class DbVector():
         doc = Document(page_content=text)
         return text_splitter.split_documents([doc])
     
-    def _similarities(self, text:str, type:STORE, 
+    def _similarities(self, text:str, type:Enum, 
                      nb=5)->(Document, float):
         return self.stores[type.name].similarity_search_with_relevance_scores(text, k=nb)   
 
-    def _similarities_ids(self, text:str, type:STORE, 
+    def _similarities_ids(self, text:str, type:Enum, 
                                 nb=5)->dict[int, float]:
         sims = self._similarities(text, type, nb)
         ids = {}
@@ -215,18 +234,18 @@ class DbVector():
             ids[id] = sim[1]
         return ids     
         
-    def similarity_searches(self, sdb:SessionDB, text:str, nb=5)->list[SimilaritySearch]:
+    def similarity_searches(self, text:str, nb=5)->list[SimilaritySearch]:
         sims = self._similarities(text, STORE.SEARCH, nb)
         list = []
         for sim in sims:            
             doc = sim[0]
             score_query = sim[1]
             id = doc.metadata['search_id']
-            search = sdb.select_search_by_id(id)
+            search = self.sdb.select_search_by_id(id)
             list.append(SimilaritySearch(search, score_query))
         return list
 
-    def similarity_sources(self, sdb:SessionDB, text:str,
+    def similarity_sources(self, text:str,
                            nb=5)->list[SimilaritySource]:
         dict = {}
         for store in [STORE.SOURCE, STORE.SRC_SUMMARY]:
@@ -234,7 +253,7 @@ class DbVector():
             for id, score in sims.items():
                 ss = dict.get(id)
                 if not ss:
-                    source = sdb.select_source_by_id(id)
+                    source = self.sdb.select_source_by_id(id)
                     ss = SimilaritySource(source)
                     dict[id] = ss
                 ss.set_score_src(store, score)
@@ -244,10 +263,10 @@ class DbVector():
             lss = lss[:nb]
         return lss
     
-    def similarity_sources_extract(self, sdb:SessionDB, text:str,
+    def similarity_sources_extract(self, text:str,
                                    nb=5)->(list[SimilaritySource], list[SimilaritySource]):
-        sims = self.similarity_sources(sdb, text, nb=nb*5)
-        sims_extract = self._similarities(text, STORE.SRC_EXTRACT, nb=nb*10)
+        sims = self.similarity_sources(text, nb=nb*5)
+        sims_extract = self._similarities(text, STORE.SRC_TEXT, nb=nb*10)
         list = []
         for sim in sims_extract:
             doc = sim[0]
@@ -258,7 +277,10 @@ class DbVector():
             if not sim_src:
                 continue
             sim_doc = deepcopy(sim_src)
-            sim_doc.doc_type = "Extract"
+            id_text = doc.metadata['source_text_id']
+            sim_doc.source_text = self.sdb.select_source_text(id_text)
+
+            sim_doc.doc_type = "Text"
             sim_doc.doc_text = doc.page_content
             if chunk:
                 sim_doc.doc_chunk = int(chunk)

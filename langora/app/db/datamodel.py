@@ -66,25 +66,20 @@ class Source(Base):
     title: Mapped[str] = mapped_column(String, nullable=True)
     snippet: Mapped[str] = mapped_column(Text, nullable=True)    
 
-    extract: Mapped[str] = mapped_column(Text, nullable=True)
-    date_extract: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    source_texts: Mapped[List["SourceText"]] = relationship(back_populates="source", order_by='SourceText.order')
+    date_texts: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    checked_texts:Mapped[bool] = mapped_column(Boolean, default=False)
 
     summary: Mapped[str] = mapped_column(Text, nullable=True)
     date_summary: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     search_sources: Mapped[List["SearchSource"]] = relationship(back_populates="source", order_by='SearchSource.rank')
 
-    source_texts: Mapped[List["SourceText"]] = relationship(back_populates="source", order_by='SourceText.order')
-    date_texts: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    checked_texts:Mapped[bool] = mapped_column(Boolean, default=False)
-
     def get_name(self):
         return f'{self.title} [{self.site}]'
-
-    def document_extract(self)->Document:
-        return Document(
-                page_content=self.extract, metadata={"source": self.url}
-            )
+    
+    def nb_source_texts(self):
+        return len(self.source_texts)
     
 class SourceText(Base):
     __tablename__ = "source_text"
@@ -92,9 +87,7 @@ class SourceText(Base):
 
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     index: Mapped[int] = mapped_column(Integer, nullable=False)    
-    title: Mapped[str] = mapped_column(String, nullable=True)
-    tree_ids: Mapped[str] = mapped_column(String, nullable=True)
-    tree_title: Mapped[str] = mapped_column(String, nullable=True)
+    title: Mapped[str] = mapped_column(String, nullable=True)    
     text: Mapped[str] = mapped_column(Text, nullable=True)
 
     source_id: Mapped[int] = mapped_column(Integer, ForeignKey(Source.id))

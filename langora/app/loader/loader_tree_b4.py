@@ -23,7 +23,7 @@ class LoaderTreeB4(LoaderWebTree):
                     if skip_next_text:
                         skip_next_text=False
                         continue
-                    level.text += self.clean_text(tag)
+                    level.text += self.clean_text(tag) + " "
                 continue
             if pattern_header.match(tag.name):
                 idx = int(tag.name[1:])

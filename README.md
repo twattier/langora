@@ -49,5 +49,6 @@ ex :
 ```
 python cli.py install
     --agent "an expert in artificial intelligence consulting for businesses"
-    --topics "Generative AI", "Large language model", "Generative AI business use cases", "Generative AI development methodology"
+    --topics "Generative AI", "Generative AI business values", "Generative AI business use cases", "Generative AI development methodology"
+    --load source
 ```

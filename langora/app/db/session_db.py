@@ -1,30 +1,29 @@
 import numbers
-from langchain.vectorstores.pgvector import PGVector
-from sqlalchemy import Engine
-from sqlalchemy import select, delete, text, func, and_, or_
+from langchain_core.embeddings import Embeddings
+from sqlalchemy import Connection
 from sqlalchemy.orm import Session
+from sqlalchemy import select, delete, text, func, and_, or_
 
-from config.env import Config
 from db.datamodel import Base, Topic, Knowledge, Search, Source, SearchSource, SourceText
+from db.dbvector import DbVector
 
 class SessionDB():
-    def __init__(self, engine:Engine)->None:
-        self.engine = engine
-        self.connection = self.engine.connect()            
-        # self.session = Session(bind=self.connection,
-        #                        expire_on_commit=False, 
-        #                        autocommit=False,
-        #                        join_transaction_mode="create_savepoint"
-        #                     )
-        self.session  = Session(bind=self.connection, 
-                                expire_on_commit=False
-                                )
+    def __init__(self, connection:Connection, embeddings:Embeddings)->None:        
+        self.connection = connection
+        self.session = Session(bind=connection)
+        self.vector = DbVector(self, embeddings)
+        self.vector.init_stores()
     
-    def close(self)->None:
-        self.session.close()         
-        self.session = None
-        self.connection.close()
-        self.connection = None
+    def close(self)->None:   
+        try:
+            print("Commit session")     
+            self.session.commit()
+        finally:
+            self.session.close()         
+            self.session = None
+            self.connection.close()
+            self.connection = None
+            self.vector = None
 
     # ---------------------------------------------------------------------------
     # ORM
@@ -111,14 +110,17 @@ class SessionDB():
         return self.select_many(stmt)
     
     def select_not_extracted_sources(self)->list[Source]:
-        stmt = select(Source).where(or_(Source.extract == None, Source.date_texts == None))
-        return self.select_many(stmt)
+        # stmt = select(Source).where(Source.nb_source_texts() == 0)
+        # return self.select_many(stmt)
+        return list(filter(lambda x: len(x.source_texts) == 0, self.select_sources()))
     
     def select_not_summarized_sources(self)->list[Source]:
-        stmt = select(Source).where(
-            and_(Source.extract != None, Source.summary == None)
-            )
-        return self.select_many(stmt)
+        # stmt = select(Source).where(
+        #     and_(Source.nb_source_texts() > 0, Source.summary == None)
+        #     )
+        # return self.select_many(stmt)
+        stmt = select(Source).where(Source.summary == None)
+        return list(filter(lambda x: len(x.source_texts) > 0, self.select_many(stmt)))
     
     def delete_all_source_texts(self, source_id):
         stmt = delete(SourceText).where(SourceText.source_id==source_id)
@@ -129,27 +131,6 @@ class SessionDB():
     def select_source_text(self, source_text_id):
         stmt = select(SourceText).where(SourceText.id==source_text_id)
         return self.select_one(stmt)
-
-    # ---------------------------------------------------------------------------
-    # Create Database
-    # ---------------------------------------------------------------------------
-
-    def recreate_database(self):
-        self.clean_database()        
-        self.create_schema()
-
-    def clean_database(self):
-        print('Clean Database if needed')       
-        for dm in ["knowledge", "search_topic", "topic", "search_source", "source", "search"]:
-            query = "DROP TABLE IF EXISTS " + dm
-            self.raw_execute(query)
-        for em in ["langchain_pg_embedding"]: #, "langchain_pg_collection"]:
-            query = "TRUNCATE " + em
-            self.raw_execute(query)        
-
-    def create_schema(self):
-        print('Create schema')
-        Base.metadata.create_all(self.engine)
 
     # ---------------------------------------------------------------------------
     # Execute
@@ -172,6 +153,10 @@ class SessionDB():
     def select_many(self, stmt):
         return self.session.execute(stmt).scalars().all()
     
+    def execute_sql(self, query:str):
+        stmt = text(query)
+        self.session.execute(stmt)
+    
     def save(self)->None:        
 
         nb_new = len(self.session.new)
@@ -180,29 +165,9 @@ class SessionDB():
         nb_change = nb_new + nb_update + nb_delete
 
         if nb_change == 0:
-            print("Commit : No change")
+            print("Flush : No change")
             return 
           
-        print("Commit : new objects  : {} , updated objects : {}, deleted objects : {}"
-              .format(nb_new, nb_update, nb_delete))        
-        try:
-            self.session.commit()
-        except:
-            print("Error : Rollback")
-            self.session.rollback()  
-            raise
-
-    def raw_execute(self, query:str)->None:
-        try:
-            connection = self.engine.raw_connection()
-            cursor = connection.cursor()
-            command = query
-            cursor.execute(command)
-            connection.commit()            
-        except:
-            print("SQL Execute Error : " + query)
-            self.session.rollback()  
-            raise
-        finally:
-            cursor.close()
-            connection.close()
+        print("Flush : new objects  : {} , updated objects : {}, deleted objects : {}"
+              .format(nb_new, nb_update, nb_delete))                        
+        self.session.flush()
